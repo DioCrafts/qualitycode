@@ -4,11 +4,11 @@ Caso de uso para obtener proyectos.
 from typing import List, Optional
 from dataclasses import dataclass
 
-from codeant_agent.domain.entities.project import Project
-from codeant_agent.domain.repositories.project_repository import ProjectRepository
-from codeant_agent.domain.value_objects.project_id import ProjectId
-from codeant_agent.utils.error import Result, BaseError
-from codeant_agent.utils.logging import get_logger
+from src.codeant_agent.domain.entities.project import Project
+from src.codeant_agent.domain.repositories.project_repository import ProjectRepository
+from src.codeant_agent.domain.value_objects.project_id import ProjectId
+from src.codeant_agent.utils.error import Result, BaseError
+from src.codeant_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

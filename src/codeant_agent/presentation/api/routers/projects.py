@@ -7,19 +7,19 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
 
-from ...domain.entities.project import Project, ProjectSettings, ProjectMetadata
-from ...domain.value_objects.project_id import ProjectId
-from ...domain.value_objects.repository_type import RepositoryType, ProjectStatus
-from ...application.use_cases.create_project_use_case import (
+from src.codeant_agent.domain.entities.project import Project, ProjectSettings, ProjectMetadata
+from src.codeant_agent.domain.value_objects.project_id import ProjectId
+from src.codeant_agent.domain.value_objects.repository_type import RepositoryType, ProjectStatus
+from src.codeant_agent.application.use_cases.create_project_use_case import (
     CreateProjectUseCase,
     CreateProjectRequest,
     CreateProjectResponse
 )
-from ...application.use_cases.get_projects_use_case import GetProjectsUseCase
-from ...infrastructure.repositories.postgresql_project_repository import PostgreSQLProjectRepository
-from ...infrastructure.database.connection import get_database_session
-from ...infrastructure.vcs.git_handler import GitHandler
-from ...utils.logging import get_logger
+from src.codeant_agent.application.use_cases.get_projects_use_case import GetProjectsUseCase
+from src.codeant_agent.infrastructure.repositories.postgresql_project_repository import PostgreSQLProjectRepository
+from src.codeant_agent.infrastructure.database.connection import get_database_session
+from src.codeant_agent.infrastructure.vcs.git_handler import GitHandler
+from src.codeant_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
