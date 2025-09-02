@@ -9,17 +9,17 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/api': {
-				target: 'http://localhost:8001',
+				target: 'http://backend:8000',
 				changeOrigin: true
 			},
 			'/api/realtime': {
-				target: 'ws://localhost:8001',
+				target: 'ws://backend:8000',
 				ws: true
 			}
 		}
 	},
 	define: {
-		'process.env.PUBLIC_API_URL': JSON.stringify('http://localhost:8001'),
-		'process.env.PUBLIC_WS_URL': JSON.stringify('ws://localhost:8001')
+		'process.env.PUBLIC_API_URL': JSON.stringify('http://backend:8000'),
+		'process.env.PUBLIC_WS_URL': JSON.stringify('ws://backend:8000')
 	}
 });

@@ -5,8 +5,12 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ fetch }) => {
     try {
         // Intenta obtener los proyectos del backend real
-        const apiUrl = process.env.PUBLIC_API_URL || 'http://localhost:8001';
-        const response = await fetch(`${apiUrl}/api/v1/projects`);
+        const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
+        const response = await fetch(`${apiUrl}/api/v1/projects`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
 
         if (response.ok) {
             const projects = await response.json();
@@ -95,7 +99,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         const projectData = await request.json();
 
         // Intenta crear el proyecto en el backend real
-        const apiUrl = process.env.PUBLIC_API_URL || 'http://localhost:8001';
+        const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
         const response = await fetch(`${apiUrl}/api/v1/projects`, {
             method: 'POST',
             headers: {
