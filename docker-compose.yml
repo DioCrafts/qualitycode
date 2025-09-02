@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE__URL=postgresql://codeant:codeant123@db:5432/codeant_db
       - SERVER__HOST=0.0.0.0
