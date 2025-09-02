@@ -25,6 +25,9 @@ services:
       - PUBLIC_API_URL=http://backend:8000
     depends_on:
       - backend
+    networks:
+      - default
+      - ingress-net
 
   # PostgreSQL Database
   db:
@@ -40,3 +43,7 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  ingress-net:
+    external: true
