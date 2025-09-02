@@ -1,0 +1,25 @@
+# Backend Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar archivos necesarios para la instalación
+COPY pyproject.toml .
+COPY README.md .
+COPY src/ ./src/
+
+# Instalar dependencias
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir .
+
+# Puerto
+EXPOSE 8000
+
+# Comando por defecto
+CMD ["uvicorn", "src.codeant_agent.main:app", "--host", "0.0.0.0", "--port", "8000"]

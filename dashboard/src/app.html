@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" class="%sveltekit.theme%">
+
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="description" content="CodeAnt Dashboard - Interactive code analysis and visualization platform" />
+	<meta name="theme-color" content="#3b82f6" />
+
+	<!-- PWA manifest -->
+	<link rel="manifest" href="%sveltekit.assets%/manifest.json" />
+
+	<!-- Apple touch icon -->
+	<link rel="apple-touch-icon" href="%sveltekit.assets%/icon-192.png" />
+
+	<!-- Preconnect to API -->
+	<link rel="preconnect" href="https://api.codeant.com" />
+
+	%sveltekit.head%
+</head>
+
+<body data-sveltekit-preload-data="hover" class="antialiased">
+	<div style="display: contents">%sveltekit.body%</div>
+</body>
+
+</html>

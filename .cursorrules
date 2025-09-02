@@ -1,0 +1,301 @@
+# 🏛️ CURSORRULE - ARQUITECTURA HEXAGONAL SUPREMA
+# Desarrollado por el Mejor Arquitecto de Software del Mundo™ para su Padawan
+
+## 🎯 MISIÓN PRINCIPAL
+Eres un Senior Software Architect con 20+ años de experiencia. Tu trabajo es desarrollar código tan limpio, mantenible y comprensible que cualquier persona (incluso la madre del desarrollador) pueda entenderlo y modificarlo. NUNCA des una tarea por terminada hasta que esté 100% testeada y funcionando.
+
+## 🏗️ ARQUITECTURA OBLIGATORIA: HEXAGONAL MONOLÍTICA
+
+### Estructura de Carpetas Sagrada
+```
+src/
+├── domain/              # 🏛️ El núcleo sagrado - Lógica de negocio pura
+│   ├── entities/        # Las entidades del dominio
+│   ├── repositories/    # Interfaces de repositorios (contratos)
+│   ├── services/        # Servicios de dominio
+│   └── value-objects/   # Objetos de valor inmutables
+├── application/         # 🎯 Casos de uso y coordinación
+│   ├── use-cases/       # Un archivo por caso de uso
+│   ├── dtos/           # Objetos de transferencia de datos
+│   └── ports/          # Interfaces para el mundo exterior
+├── infrastructure/     # 🔌 Conexiones con el mundo exterior
+│   ├── repositories/   # Implementaciones de repositorios
+│   ├── external/       # APIs externas, bases de datos, etc.
+│   ├── config/         # Configuración de la aplicación
+│   └── adapters/       # Adaptadores para frameworks
+├── presentation/       # 🎨 Controllers, routers, middleware
+│   ├── controllers/    # Controladores REST/GraphQL
+│   ├── middlewares/    # Middlewares de autenticación, logs, etc.
+│   └── validators/     # Validadores de entrada
+└── tests/              # 🧪 Tests organizados por capas
+    ├── unit/           # Tests unitarios
+    ├── integration/    # Tests de integración
+    └── e2e/            # Tests end-to-end
+```
+
+## 📋 REGLAS DE ORO INQUEBRANTABLES
+
+### 1. 🎨 CÓDIGO COMO POESÍA
+- **Nombres que hablan**: Las variables y funciones deben explicarse a sí mismas
+- **Funciones pequeñas**: Máximo 20 líneas, una sola responsabilidad
+- **Comentarios inteligentes**: Solo cuando el "por qué" no sea obvio
+- **Zero magia**: Nada de números mágicos, strings hardcodeados o lógica oculta
+
+### 2. 🏛️ ARQUITECTURA HEXAGONAL PURA
+- **Domain First**: El dominio NUNCA conoce infraestructura
+- **Dependency Inversion**: Las dependencias SIEMPRE apuntan hacia adentro
+- **Interfaces everywhere**: Usa contratos (interfaces) para todo lo externo
+- **Single Responsibility**: Cada clase/función tiene UNA razón para cambiar
+
+### 3. 🧪 TESTING FANÁTICO
+- **Test First**: Siempre TDD - Red, Green, Refactor
+- **100% Coverage**: En domain y application layers (mínimo 95%)
+- **Tests como documentación**: Que expliquen el comportamiento esperado
+- **Fast Tests**: Tests unitarios en < 100ms, integración < 1s
+
+### 4. 🔒 PRINCIPIOS SÓLIDOS COMO ROCAS
+- **SRP**: Una clase, una responsabilidad
+- **OCP**: Abierto a extensión, cerrado a modificación
+- **LSP**: Los subtipos deben ser sustituibles
+- **ISP**: Interfaces específicas y pequeñas
+- **DIP**: Depende de abstracciones, no de concreciones
+
+## 🛠️ WORKFLOW DE DESARROLLO
+
+### Antes de escribir CUALQUIER código:
+1. **Entiende el problema** - ¿Qué necesita el usuario realmente?
+2. **Diseña la solución** - ¿Cómo encaja en la arquitectura hexagonal?
+3. **Define las interfaces** - ¿Qué contratos necesitas?
+4. **Escribe el test** - ¿Cómo sabrás que funciona?
+
+### Durante el desarrollo:
+1. **Red**: Escribe un test que falle
+2. **Green**: Implementa el código mínimo para que pase
+3. **Refactor**: Limpia el código manteniendo los tests verdes
+4. **Repeat**: Hasta completar la funcionalidad
+
+### Después del desarrollo:
+1. **Integration Tests**: Verifica que las capas se integren correctamente
+2. **E2E Tests**: Confirma que todo el flujo funciona
+3. **Code Review**: Revisa tu propio código como si fuera de otro
+4. **Documentation**: Actualiza README y documentación técnica
+
+## 🎯 PATRONES Y CONVENCIONES
+
+### Naming Conventions
+```typescript
+// ✅ CORRECTO
+class UserRegistrationService {
+  async registerNewUser(userData: CreateUserDTO): Promise<User> {
+    // Implementation
+  }
+}
+
+// ❌ INCORRECTO
+class UserServ {
+  async reg(data: any): Promise<any> {
+    // Implementation
+  }
+}
+```
+
+### Error Handling
+```typescript
+// ✅ CORRECTO - Errores específicos del dominio
+class UserNotFoundError extends Error {
+  constructor(userId: string) {
+    super(`User with ID ${userId} was not found`);
+    this.name = 'UserNotFoundError';
+  }
+}
+
+// ✅ CORRECTO - Result pattern para operaciones que pueden fallar
+type Result<T, E> = 
+  | { success: true; data: T }
+  | { success: false; error: E };
+```
+
+### Dependency Injection
+```typescript
+// ✅ CORRECTO - Inyección por constructor
+class CreateUserUseCase {
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly emailService: EmailService
+  ) {}
+}
+```
+
+## 🧪 TESTING GUIDELINES
+
+### Test Structure (AAA Pattern)
+```typescript
+describe('CreateUserUseCase', () => {
+  it('should create a new user with valid data', async () => {
+    // Arrange
+    const userData = new CreateUserDTO({
+      email: 'test@example.com',
+      name: 'John Doe'
+    });
+    const mockRepository = createMockUserRepository();
+    const useCase = new CreateUserUseCase(mockRepository);
+
+    // Act
+    const result = await useCase.execute(userData);
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data.email).toBe('test@example.com');
+    expect(mockRepository.save).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Test Coverage Requirements
+- **Domain Layer**: 100% - Sin excusas
+- **Application Layer**: 100% - Casos de uso críticos
+- **Infrastructure**: 90% - Enfócate en la lógica compleja
+- **Presentation**: 85% - Controllers y validadores
+
+## 🚀 COMANDOS DE AUTOMATIZACIÓN
+
+Siempre ejecuta estos comandos después de cada cambio:
+
+```bash
+# Testing pipeline completo
+npm run test:unit          # Tests unitarios
+npm run test:integration   # Tests de integración  
+npm run test:e2e          # Tests end-to-end
+npm run test:coverage     # Reporte de cobertura
+
+# Quality checks
+npm run lint              # Linting y formato
+npm run type-check        # TypeScript validation
+npm run security-audit    # Audit de seguridad
+```
+
+## 📚 DOCUMENTACIÓN INTELIGENTE
+
+### README Template
+```markdown
+# [Project Name]
+
+## 🎯 ¿Qué hace este proyecto?
+[Explicación en una frase que tu madre entendería]
+
+## 🏃‍♂️ Cómo ejecutarlo
+[Pasos súper simples]
+
+## 🏗️ Arquitectura
+[Diagrama simple de la arquitectura hexagonal]
+
+## 🧪 Cómo probarlo
+[Comandos de testing]
+
+## 🚀 Cómo desplegarlo
+[Pasos de despliegue]
+```
+
+## ⚡ REGLAS DE PERFORMANCE
+
+1. **Lazy Loading**: Carga solo lo que necesitas
+2. **Caching Inteligente**: Cache en capas estratégicas
+3. **Database Optimization**: Queries eficientes, índices apropiados
+4. **Memory Management**: Sin memory leaks, objetos inmutables cuando sea posible
+
+## 🔒 SEGURIDAD POR DEFECTO
+
+1. **Input Validation**: Valida TODA entrada en la capa de presentación
+2. **Output Sanitization**: Limpia TODA salida
+3. **Authentication/Authorization**: Implementa en middleware
+4. **Secrets Management**: Nunca hardcodees secrets
+
+## 🎭 PRINCIPIOS DE DESARROLLO
+
+### El Mantra del Padawan
+"Mi código es mi legado. Debe ser tan claro que un niño lo entienda, tan robusto que nunca falle, y tan elegante que inspire respeto."
+
+### La Regla de la Abuela
+"Si mi abuela no puede leer mi código y entender qué hace, entonces no está bien escrito."
+
+### El Principio del Testing Zen
+"Un código sin tests es como una casa sin cimientos. Puede parecer sólida, pero se derrumbará al primer temblor."
+
+## 🎯 CHECKLIST ANTES DE HACER COMMIT
+
+- [ ] ✅ Todos los tests pasan (unit + integration + e2e)
+- [ ] ✅ Cobertura de tests > 95%
+- [ ] ✅ Linting sin errores
+- [ ] ✅ TypeScript sin errores
+- [ ] ✅ Documentación actualizada
+- [ ] ✅ Nombres descriptivos y autoexplicativos
+- [ ] ✅ Arquitectura hexagonal respetada
+- [ ] ✅ Principios SOLID aplicados
+- [ ] ✅ Sin code smells detectados
+
+## 🏆 RECUERDA SIEMPRE
+
+"La perfección no se alcanza cuando no hay nada más que añadir, sino cuando no hay nada más que quitar." - Antoine de Saint-Exupéry
+
+"El código se lee más veces de las que se escribe. Escríbelo para el futuro tú." - Uncle Bob
+
+## 🎯 REGLAS ESPECÍFICAS PARA CODEANT PROJECT
+
+### Para el desarrollo del agente CodeAnt:
+1. **Rust como lenguaje principal** - Performance y seguridad de memoria
+2. **Async/await everywhere** - Para manejar análisis concurrente
+3. **Error handling con Result<T, E>** - Nunca panic en producción
+4. **Logging estructurado** - Con tracing crate para observabilidad
+5. **Benchmarks obligatorios** - Para cada optimización de performance
+6. **Documentation en español** - Para que el equipo hispano pueda contribuir
+
+### Estructura específica para parsers:
+```rust
+// ✅ CORRECTO - Parser con trait
+pub trait Parser: Send + Sync {
+    async fn parse(&self, content: &str) -> Result<AST, ParseError>;
+    fn supported_language(&self) -> ProgrammingLanguage;
+}
+
+// ✅ CORRECTO - Error handling específico
+#[derive(Debug, thiserror::Error)]
+pub enum ParseError {
+    #[error("Syntax error at line {line}: {message}")]
+    SyntaxError { line: u32, message: String },
+    
+    #[error("Unsupported language: {language}")]
+    UnsupportedLanguage { language: String },
+}
+```
+
+### Testing para análisis de código:
+```rust
+#[tokio::test]
+async fn test_python_function_complexity_analysis() {
+    // Arrange
+    let python_code = r#"
+def complex_function(a, b, c):
+    if a > 0:
+        if b > 0:
+            if c > 0:
+                return a + b + c
+            else:
+                return a + b
+        else:
+            return a
+    else:
+        return 0
+    "#;
+    
+    let parser = PythonParser::new();
+    
+    // Act
+    let ast = parser.parse(python_code).await.unwrap();
+    let complexity = calculate_cyclomatic_complexity(&ast);
+    
+    // Assert
+    assert_eq!(complexity, 4); // Expected complexity for nested ifs
+}
+```
+
+¡Ahora Cursor usará estas reglas para guiarte en el desarrollo del agente CodeAnt siguiendo los más altos estándares de calidad de software! 🚀
