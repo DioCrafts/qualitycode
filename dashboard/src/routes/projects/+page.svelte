@@ -16,7 +16,7 @@
         slug: "",
         description: "",
         repository_url: "",
-        repository_type: "GIT",
+        repository_type: "git", // Cambiado a minúsculas para coincidir con lo que espera el backend
         default_branch: "main",
     };
 
@@ -104,7 +104,7 @@
                     slug: "",
                     description: "",
                     repository_url: "",
-                    repository_type: "GIT",
+                    repository_type: "git", // Cambiado a minúsculas para coincidir con lo que espera el backend
                     default_branch: "main",
                 };
             } else {
@@ -250,9 +250,11 @@
                                 id="repository-type"
                                 bind:value={newProject.repository_type}
                             >
-                                <option value="GIT">Git</option>
-                                <option value="SVN">SVN</option>
-                                <option value="MERCURIAL">Mercurial</option>
+                                <option value="git">Git</option>
+                                <option value="subversion">SVN</option>
+                                <option value="mercurial">Mercurial</option>
+                                <option value="perforce">Perforce</option>
+                                <option value="unknown">Otro</option>
                             </select>
                         </div>
                         <div class="form-group">
