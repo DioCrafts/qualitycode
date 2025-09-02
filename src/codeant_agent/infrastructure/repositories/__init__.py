@@ -2,10 +2,8 @@
 Módulo de repositorios de CodeAnt Agent.
 """
 
-from .postgresql_project_repository import PostgreSQLProjectRepository
-from .postgresql_repository_repository import PostgreSQLRepositoryRepository
-from .postgresql_file_index_repository import PostgreSQLFileIndexRepository
-from .postgresql_user_repository import PostgreSQLUserRepository
+# No importamos directamente para evitar problemas de importación circular
+# Las clases deben importarse directamente desde sus respectivos módulos
 
 __all__ = [
     "PostgreSQLProjectRepository",

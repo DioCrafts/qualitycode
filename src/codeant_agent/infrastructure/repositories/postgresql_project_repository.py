@@ -10,14 +10,15 @@ from sqlalchemy import select, update, delete, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from codeant_agent.domain.entities import Project, ProjectSettings, ProjectMetadata
-from codeant_agent.domain.repositories import ProjectRepository
-from codeant_agent.domain.value_objects import ProjectId, ProjectStatus
-from codeant_agent.infrastructure.database.models import Project as ProjectModel
-from codeant_agent.infrastructure.database.models import Organization as OrganizationModel
-from codeant_agent.infrastructure.database.models import User as UserModel
-from codeant_agent.utils.error import Result, BaseError
-from codeant_agent.utils.logging import get_logger
+from src.codeant_agent.domain.entities.project import Project, ProjectSettings, ProjectMetadata
+from src.codeant_agent.domain.repositories.project_repository import ProjectRepository
+from src.codeant_agent.domain.value_objects.project_id import ProjectId
+from src.codeant_agent.domain.value_objects.repository_type import ProjectStatus
+from src.codeant_agent.infrastructure.database.models import Project as ProjectModel
+from src.codeant_agent.infrastructure.database.models import Organization as OrganizationModel
+from src.codeant_agent.infrastructure.database.models import User as UserModel
+from src.codeant_agent.utils.error import Result, BaseError
+from src.codeant_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

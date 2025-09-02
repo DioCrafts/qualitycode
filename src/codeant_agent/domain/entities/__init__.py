@@ -5,51 +5,15 @@ Este módulo contiene todas las entidades del dominio que representan
 los conceptos principales del negocio.
 """
 
-from .project import Project
-from .repository import Repository
-from .file_index import FileIndex
-from .user import User
-from .parse_result import ParseResult, ParseRequest, ParseStatus, ParseWarning, ParseMetadata
-from .language_detection import DetectionResult, DetectionContext, DetectionStrategy, DetectionConfidence
-from .parse_cache import CachedParseResult, CacheConfig, CacheStats, CacheLevel, CacheStatus, EvictionPolicy
-from .ast_query import QueryRequest, QueryResult, QueryMatch, QueryCapture, QueryType, QueryStatus
-from .ast_normalization import (
-    NormalizedAST, NormalizedNode, NodeType, NodeVisibility, NodeModifier,
-    SourcePosition, SemanticInfo
-)
-from .parser_errors import (
-    ParserError, ParseWarning as ParserParseWarning, ErrorContext, ErrorReport,
-    ErrorSeverity, ErrorCategory, RecoveryStrategy
-)
-from .parser_config import (
-    ParserConfig, LanguageSpecificConfig, ParserProfile,
-    ParserMode, CacheStrategy, ParallelStrategy
-)
-from .dead_code_analysis import (
-    DeadCodeAnalysis, ProjectDeadCodeAnalysis, UnusedVariable, UnusedFunction,
-    UnusedClass, UnusedImport, UnreachableCode, DeadBranch, UnusedParameter,
-    RedundantAssignment, DeadCodeStatistics, EntryPoint, CrossModuleIssue,
-    UnusedReason, UnreachabilityReason, ImportType, Visibility, FunctionType,
-    ScopeType, AssignmentType, RedundancyType, EntryPointType, SourcePosition,
-    SourceRange, ScopeInfo, Parameter, SideEffect, BlockingCondition,
-    ImportStatement
-)
-from .dependency_analysis import (
-    ControlFlowGraph, ControlFlowNode, ControlFlowEdge, DependencyGraph,
-    GlobalDependencyGraph, SymbolInfo, ModuleInfo, Dependency, LivenessInfo,
-    DefUseChain, UsageLocation, UsageAnalysis, NodeId, SymbolId, ModuleId,
-    NodeType, EdgeType, DependencyType, SymbolType
-)
-from .clone_analysis import (
-    CloneAnalysis, ProjectCloneAnalysis, Clone, ExactClone, StructuralClone,
-    SemanticClone, CrossLanguageClone, InterFileClone, CloneClass, CloneClassId,
-    CloneId, DuplicationMetrics, RefactoringOpportunity, RefactoringStep,
-    CodeChange, SimilarityMetrics, CloneDetectionConfig, CodeLocation, CodeBlock,
-    CloneType, SimilarityAlgorithm, HashAlgorithm, RefactoringType, EstimatedEffort,
-    RefactoringBenefit, SemanticUnitType, SimilarityEvidence, StructuralDifference,
-    NodeMapping, ConceptMapping, TranslationEvidence, CloneClassMetrics,
-    RefactoringPotential
-)
+# No importamos directamente para evitar problemas de importación circular.
+# En lugar de importar desde este archivo, las clases deben importarse directamente
+# desde sus respectivos módulos para evitar problemas.
+#
+# Por ejemplo, en lugar de:
+# from codeant_agent.domain.entities import Project
+#
+# Usar:
+# from src.codeant_agent.domain.entities.project import Project
 
 __all__ = [
     # Entidades principales
