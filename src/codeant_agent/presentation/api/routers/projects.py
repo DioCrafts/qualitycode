@@ -23,8 +23,8 @@ from ....utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Crear router
-router = APIRouter(prefix="/api/v1", tags=["projects"])
+# Crear router - usando /api en lugar de /api/v1 para que coincida con las llamadas del frontend
+router = APIRouter(prefix="/api", tags=["projects"])
 
 
 # DTOs para requests y responses
