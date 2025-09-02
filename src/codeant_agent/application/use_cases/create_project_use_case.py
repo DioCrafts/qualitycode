@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
 
-from codeant_agent.domain.entities.project import Project, ProjectSettings
-from codeant_agent.domain.value_objects.repository_type import RepositoryType
-from codeant_agent.domain.repositories.project_repository import ProjectRepository
-from codeant_agent.domain.repositories.repository_repository import RepositoryRepository
-from codeant_agent.infrastructure.vcs.git_handler import GitHandler
-from codeant_agent.utils.error import Result, BaseError, ValidationError
-from codeant_agent.utils.logging import get_logger
+from src.codeant_agent.domain.entities.project import Project, ProjectSettings
+from src.codeant_agent.domain.entities.repository import Repository
+from src.codeant_agent.domain.value_objects.repository_type import RepositoryType
+from src.codeant_agent.domain.repositories.project_repository import ProjectRepository
+from src.codeant_agent.domain.repositories.repository_repository import RepositoryRepository
+from src.codeant_agent.infrastructure.vcs.git_handler import GitHandler
+from src.codeant_agent.utils.error import Result, BaseError, ValidationError
+from src.codeant_agent.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
