@@ -7,19 +7,19 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
 
-from src.codeant_agent.domain.entities.project import Project, ProjectSettings, ProjectMetadata
-from src.codeant_agent.domain.value_objects.project_id import ProjectId
-from src.codeant_agent.domain.value_objects.repository_type import RepositoryType, ProjectStatus
-from src.codeant_agent.application.use_cases.create_project_use_case import (
+from ....domain.entities.project import Project, ProjectSettings, ProjectMetadata
+from ....domain.value_objects.project_id import ProjectId
+from ....domain.value_objects.repository_type import RepositoryType, ProjectStatus
+from ....application.use_cases.create_project_use_case import (
     CreateProjectUseCase,
     CreateProjectRequest,
     CreateProjectResponse
 )
-from src.codeant_agent.application.use_cases.get_projects_use_case import GetProjectsUseCase
-from src.codeant_agent.infrastructure.repositories.postgresql_project_repository import PostgreSQLProjectRepository
-from src.codeant_agent.infrastructure.database.connection import get_database_session
-from src.codeant_agent.infrastructure.vcs.git_handler import GitHandler
-from src.codeant_agent.utils.logging import get_logger
+from ....application.use_cases.get_projects_use_case import GetProjectsUseCase
+from ....infrastructure.repositories.postgresql_project_repository import PostgreSQLProjectRepository
+from ....infrastructure.vcs.git_handler import GitHandler
+from ....utils.error import Result
+from ....utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -91,13 +91,40 @@ class ProjectResponseDTO(BaseModel):
 def get_project_repository():
     """Obtener repositorio de proyectos."""
     # En un entorno real, esto vendría de un contenedor de dependencias
-    # Por ahora, creamos una instancia simple
-    return PostgreSQLProjectRepository()
+    # Por ahora, creamos una instancia simple con una implementación Mock
+    class MockProjectRepository:
+        async def save(self, project):
+            logger.info(f"Guardar proyecto simulado: {project.name}")
+            return Result.success(project)
+            
+        async def find_by_id(self, project_id):
+            logger.info(f"Buscar proyecto simulado por ID: {project_id}")
+            # Crear proyecto de ejemplo
+            return Result.success(None)
+            
+        async def find_all(self, skip=0, limit=100):
+            logger.info(f"Listar proyectos simulados: skip={skip}, limit={limit}")
+            # Devolver lista vacía
+            return Result.success([])
+            
+    return MockProjectRepository()
 
 
 def get_git_handler():
     """Obtener handler de Git."""
-    return GitHandler()
+    # Crear un handler simulado
+    class MockGitHandler:
+        async def clone_repository(self, url, local_path, branch='main', credentials=None):
+            logger.info(f"Clonar repositorio simulado: {url} -> {local_path}")
+            return Result.success({
+                "url": url,
+                "local_path": local_path,
+                "branch": branch,
+                "commit_hash": "1234567890abcdef",
+                "commit_date": "2025-09-02T00:00:00Z"
+            })
+    
+    return MockGitHandler()
 
 
 def get_create_project_use_case(
