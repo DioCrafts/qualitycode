@@ -26,6 +26,7 @@ from .utils.telemetry import (
     TelemetryMiddleware
 )
 from .utils.error import BaseError, ValidationError
+from .presentation.api.routers import projects
 
 
 # Logger global
@@ -101,6 +102,9 @@ def create_app() -> FastAPI:
     
     # Configurar endpoints
     setup_endpoints(app)
+    
+    # Incluir routers de API
+    app.include_router(projects.router)
     
     logger.info("Aplicación FastAPI creada y configurada")
     return app
