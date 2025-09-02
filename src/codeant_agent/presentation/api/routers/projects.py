@@ -107,6 +107,11 @@ def get_project_repository():
             # Devolver lista vacía
             return Result.success([])
             
+        async def find_by_repository_url(self, url):
+            logger.info(f"Buscar proyecto simulado por URL: {url}")
+            # Devolver None para simular que no existe el proyecto
+            return Result.success(None)
+            
     return MockProjectRepository()
 
 
