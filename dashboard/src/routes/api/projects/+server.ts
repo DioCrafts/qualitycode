@@ -1,58 +1,47 @@
+import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 
 // Función para obtener proyectos
-export const GET: RequestHandler = async ({ fetch }) => {
+export const GET = (async () => {
     try {
-        // Intenta obtener los proyectos del backend real
-        const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
-        const response = await fetch(`${apiUrl}/api/v1/projects`, {
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        console.log("Obteniendo proyectos - modo desarrollo activo");
 
-        if (response.ok) {
-            const projects = await response.json();
-            return json(projects);
-        } else {
-            console.error('Error al obtener proyectos del backend:', response.status);
-            // Retorna proyectos de ejemplo para desarrollo
-            return json([
-                {
-                    id: '1',
-                    name: 'Proyecto Demo',
-                    description: 'Un proyecto de ejemplo para mostrar la funcionalidad',
-                    slug: 'demo-project',
-                    status: 'ACTIVE',
-                    metadata: {
-                        stars: 15,
-                        forks: 5,
-                        language_stats: {
-                            'Python': 60,
-                            'JavaScript': 30,
-                            'HTML': 10
-                        }
-                    }
-                },
-                {
-                    id: '2',
-                    name: 'API REST',
-                    description: 'Servicio backend con arquitectura hexagonal',
-                    slug: 'api-rest',
-                    status: 'ACTIVE',
-                    metadata: {
-                        stars: 42,
-                        forks: 12,
-                        language_stats: {
-                            'Python': 80,
-                            'YAML': 15,
-                            'Dockerfile': 5
-                        }
+        // En modo desarrollo usamos datos de ejemplo directamente
+        // Nota: Backend no tiene la ruta configurada aún
+        return json([
+            {
+                id: '1',
+                name: 'Proyecto Demo',
+                description: 'Un proyecto de ejemplo para mostrar la funcionalidad',
+                slug: 'demo-project',
+                status: 'ACTIVE',
+                metadata: {
+                    stars: 15,
+                    forks: 5,
+                    language_stats: {
+                        'Python': 60,
+                        'JavaScript': 30,
+                        'HTML': 10
                     }
                 }
-            ]);
-        }
+            },
+            {
+                id: '2',
+                name: 'API REST',
+                description: 'Servicio backend con arquitectura hexagonal',
+                slug: 'api-rest',
+                status: 'ACTIVE',
+                metadata: {
+                    stars: 42,
+                    forks: 12,
+                    language_stats: {
+                        'Python': 80,
+                        'YAML': 15,
+                        'Dockerfile': 5
+                    }
+                }
+            }
+        ]);
     } catch (error) {
         console.error('Error en API de proyectos:', error);
         // Retorna proyectos de ejemplo para desarrollo
@@ -91,37 +80,16 @@ export const GET: RequestHandler = async ({ fetch }) => {
             }
         ]);
     }
-};
+}) satisfies RequestHandler;
 
 // Función para crear un nuevo proyecto
-export const POST: RequestHandler = async ({ request, fetch }) => {
+export const POST = (async ({ request }) => {
     try {
         const projectData = await request.json();
+        console.log("Creando proyecto - modo desarrollo activo:", projectData);
 
-        // Intenta crear el proyecto en el backend real
-        const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
-        const response = await fetch(`${apiUrl}/api/v1/projects`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(projectData)
-        });
-
-        if (response.ok) {
-            const createdProject = await response.json();
-            return json(createdProject);
-        } else {
-            const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-            return json(
-                { error: errorData.message || `Error del servidor: ${response.status}` },
-                { status: response.status }
-            );
-        }
-    } catch (error) {
-        console.error('Error al crear proyecto:', error);
-
-        // En desarrollo, simula la creación exitosa
+        // En modo desarrollo, simulamos la creación exitosa
+        // Nota: Backend no tiene la ruta configurada aún
         const mockProject = {
             id: crypto.randomUUID(),
             name: projectData?.name || 'Nuevo proyecto',
@@ -141,5 +109,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
         };
 
         return json(mockProject);
+    } catch (error) {
+        console.error('Error al crear proyecto:', error);
+        return json({ error: 'Error al crear proyecto' }, { status: 500 });
     }
-};
+}) satisfies RequestHandler;
