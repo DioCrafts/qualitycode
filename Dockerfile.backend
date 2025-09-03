@@ -1,74 +1,55 @@
-# syntax=docker/dockerfile:1.7
+# Backend Dockerfile optimizado
+FROM python:3.11-slim as base
 
-############################################
-# 1) Stage: deps (resolver y construir wheels)
-############################################
-FROM python:3.11-slim AS deps
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore \
+# Configurar variables de entorno para optimizar pip
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 WORKDIR /app
 
-# Toolchain para compilar deps (no va a la imagen final)
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-      build-essential gcc git \
+# ============================================
+# Stage 1: Instalar dependencias del sistema
+# ============================================
+FROM base as system-deps
+
+# Instalar dependencias del sistema (esta capa se cachea bien)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos solo metadata para maximizar caché
-COPY pyproject.toml README.md ./
+# Upgrade pip una sola vez
+RUN pip install --upgrade pip
 
-# Herramientas de resolución/packaging
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --upgrade pip pip-tools build wheel
+# ============================================
+# Stage 2: Instalar dependencias Python
+# ============================================
+FROM system-deps as python-deps
 
-# === FIX tomllib ===
-# Genera requirements.in a partir de [project.dependencies] del pyproject
-RUN python - <<'PY'
-import tomllib, pathlib
-text = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
-data = tomllib.loads(text)
-reqs = data.get("project", {}).get("dependencies", [])
-pathlib.Path("requirements.in").write_text("\n".join(reqs) + "\n", encoding="utf-8")
-PY
+# CLAVE: Copiar SOLO los archivos de configuración primero
+# Esto permite que Docker cache la instalación de dependencias
+COPY pyproject.toml .
+COPY README.md .
 
-# Resuelve versiones y construye wheelhouse (ultra rápido en builds posteriores)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip-compile requirements.in -o requirements.txt --resolver=backtracking --quiet && \
-    pip wheel --prefer-binary -r requirements.txt -w /wheels
+# Crear directorio src vacío para que setuptools no falle
+RUN mkdir -p src/codeant_agent && \
+    touch src/codeant_agent/__init__.py
 
-############################################
-# 2) Stage: runtime (ligero, sin toolchain)
-############################################
-FROM python:3.11-slim AS runtime
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-WORKDIR /app
+# Instalar dependencias (se cachea mientras no cambien pyproject.toml)
+RUN pip install -e .
 
-# Librerías de runtime necesarias (libpq5 para asyncpg)
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-      libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+# ============================================
+# Stage 3: Agregar código fuente
+# ============================================
+FROM python-deps as final
 
-# Instala deps desde wheelhouse (sin red/compilación)
-COPY --from=deps /wheels /wheels
-COPY --from=deps /app/requirements.txt /app/requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-index --find-links=/wheels -r requirements.txt && \
-    rm -rf /wheels
-
-# Copia del código (no invalida capa de deps)
+# Ahora copiar el código fuente (esto se invalida frecuentemente)
 COPY src/ ./src/
 
-# Instala el paquete sin resolver deps de nuevo
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-deps --no-build-isolation .
-
+# Puerto
 EXPOSE 8000
+
+# Comando por defecto
 CMD ["uvicorn", "src.codeant_agent.main:app", "--host", "0.0.0.0", "--port", "8000"]

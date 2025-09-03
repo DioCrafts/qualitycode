@@ -28,19 +28,19 @@ dependencies = [
     "alembic>=1.13.0",
     "asyncpg>=0.29.0",
     "redis>=5.0.0",
-    
+
     # Parsers
     "tree-sitter>=0.20.0",
     "tree-sitter-python>=0.20.0",
     "tree-sitter-typescript>=0.20.0",
     "tree-sitter-javascript>=0.20.0",
     "libcst>=1.1.0",
-    
-    # AI/ML
-    "torch>=2.1.0",
+
+    # AI/ML (CPU)
+    "torch==2.1.0+cpu",
     "transformers>=4.36.0",
     "sentence-transformers>=2.2.0",
-    
+
     # Utilities
     "structlog>=23.2.0",
     "httpx>=0.25.0",
@@ -58,7 +58,6 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.41b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.41b0",
     "opentelemetry-instrumentation-httpx>=0.41b0",
-    "redis>=5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -74,4 +73,3 @@ target-version = ['py39', 'py310', 'py311']
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-
