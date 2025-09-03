@@ -58,14 +58,15 @@ class TypeScriptASTUnifier(ASTUnifier):
             if func.is_async:
                 unified_func.semantic_concepts.add(SemanticConcept.ASYNC_OPERATION)
             
-            if func.is_generator:
+            if getattr(func, 'is_generator', False):
                 unified_func.semantic_concepts.add(SemanticConcept.FUNCTIONAL)
             
             # Tipo de retorno
-            if func.return_type:
+            return_type = getattr(func, 'return_type', None) or getattr(func, 'return_annotation', None)
+            if return_type:
                 unified_func.unified_type = UnifiedType(
-                    name=func.return_type,
-                    category='object' if func.return_type[0].isupper() else 'primitive'
+                    name=return_type,
+                    category='object' if return_type[0].isupper() else 'primitive'
                 )
             
             # Parámetros

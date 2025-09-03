@@ -234,16 +234,17 @@ class TypeScriptSemanticAnalyzer:
                 params = match.group(2)
                 start_line = content[:match.start()].count('\n') + 1
                 
-                functions.append(JSFunctionDefinition(
+                func_def = JSFunctionDefinition(
                     name=name,
                     start_line=start_line,
                     end_line=start_line + 1,  # Aproximado
                     is_async='async' in match.group(0),
-                    is_generator=False,
                     parameters=[p.strip() for p in params.split(',') if p.strip()],
-                    return_type=None,
-                    is_exported='export' in match.group(0)
-                ))
+                    return_annotation=None
+                )
+                # Guardar metadatos adicionales
+                func_def.is_exported = 'export' in match.group(0)
+                functions.append(func_def)
             
             # Buscar arrow functions
             arrow_pattern = r'(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\((.*?)\)\s*(?::\s*([^=]+?))?\s*=>'
@@ -253,16 +254,18 @@ class TypeScriptSemanticAnalyzer:
                 return_type = match.group(3)
                 start_line = content[:match.start()].count('\n') + 1
                 
-                functions.append(JSFunctionDefinition(
+                func_def = JSFunctionDefinition(
                     name=name,
                     start_line=start_line,
                     end_line=start_line + 1,  # Aproximado
                     is_async='async' in match.group(0),
-                    is_generator=False,
                     parameters=[p.strip() for p in params.split(',') if p.strip()],
-                    return_type=return_type.strip() if return_type else None,
-                    is_exported='export' in match.group(0)
-                ))
+                    return_annotation=return_type.strip() if return_type else None
+                )
+                # Guardar metadatos adicionales
+                func_def.is_exported = 'export' in match.group(0)
+                func_def.is_arrow_function = True
+                functions.append(func_def)
         
         return functions
     

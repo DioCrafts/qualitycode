@@ -369,19 +369,19 @@ class RustSemanticAnalyzer:
                         else:
                             parameters.append(param)
                 
-                functions.append(RustFunctionDefinition(
+                func_def = RustFunctionDefinition(
                     name=name,
                     start_line=start_line,
                     end_line=start_line + 1,  # Aproximado
                     parameters=parameters,
                     return_type=return_type,
-                    is_public=is_public,
                     is_async=is_async,
                     is_unsafe=is_unsafe,
                     is_const=is_const,
-                    generics=[],  # TODO: Parsear generics
-                    lifetimes=[]  # TODO: Parsear lifetimes
-                ))
+                    visibility='pub' if is_public else 'private'
+                )
+                
+                functions.append(func_def)
         
         return functions
     
