@@ -18,7 +18,7 @@ from ....domain.repositories.parser_repository import ParserRepository
 from ....domain.repositories.project_repository import ProjectRepository
 from ....domain.services.dead_code_service import DeadCodeClassificationService
 from ....domain.value_objects.programming_language import ProgrammingLanguage
-from ....utils.result import Result, BaseError
+from ....utils.error import Result, BaseError
 
 logger = logging.getLogger(__name__)
 
