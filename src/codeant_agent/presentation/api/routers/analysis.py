@@ -23,8 +23,6 @@ from ....application.use_cases.analyze_project_use_case import (
 )
 
 # Import de las dependencias necesarias
-from ....infrastructure.parsers.parser_factory import ParserFactory
-from ....infrastructure.dead_code_analysis.dead_code_engine import DeadCodeEngine
 from ..dependencies import get_project_repository
 
 logger = get_logger(__name__)
