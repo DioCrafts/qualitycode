@@ -10,7 +10,9 @@
 
     onMount(async () => {
         try {
-            const res = await fetch(`/api/projects/${projectId}/analysis/latest`);
+            const res = await fetch(
+                `/api/projects/${projectId}/analysis/latest`,
+            );
             if (!res.ok) {
                 error = `Error ${res.status}`;
                 return;
@@ -29,7 +31,9 @@
 <div class="analysis-page">
     <div class="header">
         <h1>Análisis del proyecto</h1>
-        <a class="btn-secondary" href={`/projects/${projectId}`}>Volver al proyecto</a>
+        <a class="btn-secondary" href={`/projects/${projectId}`}
+            >Volver al proyecto</a
+        >
     </div>
 
     {#if loading}
@@ -56,10 +60,22 @@
             <h2>Complejidad</h2>
             {#if analysis.complexity_metrics}
                 <div class="grid">
-                    <div class="card"><strong>Funciones totales:</strong> {analysis.complexity_metrics.total_functions ?? 0}</div>
-                    <div class="card"><strong>Funciones complejas:</strong> {analysis.complexity_metrics.complex_functions ?? 0}</div>
-                    <div class="card"><strong>Complejidad media:</strong> {analysis.complexity_metrics.average_complexity ?? "-"}</div>
-                    <div class="card"><strong>Complejidad máx.:</strong> {analysis.complexity_metrics.max_complexity ?? "-"}</div>
+                    <div class="card">
+                        <strong>Funciones totales:</strong>
+                        {analysis.complexity_metrics.total_functions ?? 0}
+                    </div>
+                    <div class="card">
+                        <strong>Funciones complejas:</strong>
+                        {analysis.complexity_metrics.complex_functions ?? 0}
+                    </div>
+                    <div class="card">
+                        <strong>Complejidad media:</strong>
+                        {analysis.complexity_metrics.average_complexity ?? "-"}
+                    </div>
+                    <div class="card">
+                        <strong>Complejidad máx.:</strong>
+                        {analysis.complexity_metrics.max_complexity ?? "-"}
+                    </div>
                 </div>
 
                 {#if analysis.complexity_metrics.complexity_hotspots?.length}
@@ -78,9 +94,12 @@
         <section class="section">
             <h2>Cross-language</h2>
             {#if analysis.complexity_metrics?.cross_language_analysis}
-                {#let x = analysis.complexity_metrics.cross_language_analysis}
+                {@const x = analysis.complexity_metrics.cross_language_analysis}
                 <div class="grid">
-                    <div class="card"><strong>Lenguajes analizados:</strong> {x.languages_analyzed?.join(", ") ?? "-"}</div>
+                    <div class="card">
+                        <strong>Lenguajes analizados:</strong>
+                        {x.languages_analyzed?.join(", ") ?? "-"}
+                    </div>
                     <div class="card">
                         <strong>Archivos por lenguaje:</strong>
                         <ul>
@@ -96,7 +115,10 @@
                         <strong>Pares con alta similitud:</strong>
                         <ul>
                             {#each x.high_similarity_pairs as p}
-                                <li>{p.file1} ({p.lang1}) ↔ {p.file2} ({p.lang2}) — {p.similarity}</li>
+                                <li>
+                                    {p.file1} ({p.lang1}) ↔ {p.file2} ({p.lang2})
+                                    — {p.similarity}
+                                </li>
                             {/each}
                         </ul>
                     </div>
@@ -107,7 +129,11 @@
                         <strong>Patrones cross-language:</strong>
                         <ul>
                             {#each x.cross_language_patterns as c}
-                                <li>{c.concept}: {Object.keys(c.languages).join(", ")}</li>
+                                <li>
+                                    {c.concept}: {Object.keys(c.languages).join(
+                                        ", ",
+                                    )}
+                                </li>
                             {/each}
                         </ul>
                     </div>
@@ -120,7 +146,11 @@
         <section class="section">
             <h2>Calidad</h2>
             {#if analysis.quality_metrics}
-                <pre class="pre">{JSON.stringify(analysis.quality_metrics, null, 2)}</pre>
+                <pre class="pre">{JSON.stringify(
+                        analysis.quality_metrics,
+                        null,
+                        2,
+                    )}</pre>
             {:else}
                 <div class="card">Sin métricas de calidad.</div>
             {/if}
@@ -129,7 +159,11 @@
         <section class="section">
             <h2>Duplicados</h2>
             {#if analysis.duplicate_results}
-                <pre class="pre">{JSON.stringify(analysis.duplicate_results, null, 2)}</pre>
+                <pre class="pre">{JSON.stringify(
+                        analysis.duplicate_results,
+                        null,
+                        2,
+                    )}</pre>
             {:else}
                 <div class="card">Sin resultados de duplicados.</div>
             {/if}
@@ -140,15 +174,52 @@
 </div>
 
 <style>
-    .analysis-page { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .section { margin-bottom: 2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-    .card { background: var(--color-bg-primary, #fff); border: 1px solid var(--color-border, #e5e5e5); border-radius: 8px; padding: 1rem; }
-    .value { font-size: 2rem; font-weight: 700; }
-    .label { color: #666; }
-    .loading, .error { padding: 1rem; }
-    .pre { background: var(--color-bg-secondary, #f7f7f7); padding: 1rem; border-radius: 6px; overflow: auto; }
+    .analysis-page {
+        padding: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .section {
+        margin-bottom: 2rem;
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+    }
+    .card {
+        background: var(--color-bg-primary, #fff);
+        border: 1px solid var(--color-border, #e5e5e5);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    .value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .label {
+        color: #666;
+    }
+    .loading,
+    .error {
+        padding: 1rem;
+    }
+    .pre {
+        background: var(--color-bg-secondary, #f7f7f7);
+        padding: 1rem;
+        border-radius: 6px;
+        overflow: auto;
+    }
 </style>
-
