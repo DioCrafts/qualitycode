@@ -121,49 +121,47 @@ class ProjectResponseDTO(BaseModel):
             )
 
 
-# Dependencias
-# Almacén de proyectos en memoria (para desarrollo)
-_MOCK_PROJECTS = []
+# Almacenamiento en memoria para proyectos simulados
+_IN_MEMORY_PROJECTS = []
 
+# Dependencias
 def get_project_repository():
     """Obtener repositorio de proyectos."""
     # En un entorno real, esto vendría de un contenedor de dependencias
-    # Por ahora, creamos una instancia simple con una implementación Mock que mantiene los datos en memoria
+    # Por ahora, creamos una instancia simple con una implementación Mock que usa memoria
     class MockProjectRepository:
         async def save(self, project):
             logger.info(f"Guardar proyecto simulado: {project.name}")
-            
-            # Verificar si el proyecto ya existe en la lista
-            for i, p in enumerate(_MOCK_PROJECTS):
-                if str(p.id) == str(project.id):
-                    # Actualizar proyecto existente
-                    _MOCK_PROJECTS[i] = project
-                    logger.info(f"Proyecto actualizado: {project.name}")
+            # Verificar si el proyecto ya existe para actualizarlo
+            for i, existing_project in enumerate(_IN_MEMORY_PROJECTS):
+                if str(existing_project.id) == str(project.id):
+                    _IN_MEMORY_PROJECTS[i] = project
+                    logger.info(f"Proyecto actualizado en memoria: {project.id}")
                     return Result.success(project)
-            
-            # Agregar el proyecto a la lista en memoria
-            _MOCK_PROJECTS.append(project)
-            logger.info(f"Proyecto guardado: {project.name}, total proyectos: {len(_MOCK_PROJECTS)}")
+                    
+            # Si no existe, lo añadimos
+            _IN_MEMORY_PROJECTS.append(project)
+            logger.info(f"Proyecto añadido a la memoria: {project.id}")
             return Result.success(project)
             
         async def find_by_id(self, project_id):
             logger.info(f"Buscar proyecto simulado por ID: {project_id}")
-            # Buscar en la lista de proyectos
-            for project in _MOCK_PROJECTS:
+            # Buscar en la lista en memoria
+            for project in _IN_MEMORY_PROJECTS:
                 if str(project.id) == str(project_id):
                     return Result.success(project)
             return Result.success(None)
             
         async def find_all(self, skip=0, limit=100):
-            logger.info(f"Listar proyectos simulados: skip={skip}, limit={limit}, total: {len(_MOCK_PROJECTS)}")
-            # Devolver proyectos desde la lista en memoria
-            return Result.success(_MOCK_PROJECTS[skip:skip+limit])
+            logger.info(f"Listar proyectos simulados: skip={skip}, limit={limit} - Total: {len(_IN_MEMORY_PROJECTS)}")
+            # Devolver proyectos de la memoria
+            return Result.success(_IN_MEMORY_PROJECTS[skip:skip+limit])
             
         async def find_by_repository_url(self, url):
             logger.info(f"Buscar proyecto simulado por URL: {url}")
-            # Buscar en la lista de proyectos
-            for project in _MOCK_PROJECTS:
-                if getattr(project, 'repository_url', '') == url:
+            # Buscar por URL en la memoria
+            for project in _IN_MEMORY_PROJECTS:
+                if getattr(project, 'repository_url', None) == url:
                     return Result.success(project)
             return Result.success(None)
             
@@ -292,7 +290,10 @@ async def create_project(
         project.repository_type = request.repository_type
         project.default_branch = request.default_branch
         
-        # Simular éxito de guardado
+        # Guardar el proyecto en el repositorio simulado
+        repo = get_project_repository()
+        await repo.save(project)
+        
         logger.info("Proyecto creado exitosamente", project_id=str(project.id))
         
         return ProjectResponseDTO.from_entity(project)
