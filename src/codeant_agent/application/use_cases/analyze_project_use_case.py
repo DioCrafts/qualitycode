@@ -28,7 +28,6 @@ from .dead_code.analyze_project_dead_code_use_case import (
 # from .security_use_cases import RunSecurityAnalysisUseCase  # TODO: Implementar cuando esté disponible
 
 # Import servicios de dominio
-from ...infrastructure.dead_code_analysis.dead_code_engine import DeadCodeEngine
 from ...infrastructure.parsers.parser_factory import ParserFactory
 
 logger = get_logger(__name__)
@@ -108,7 +107,7 @@ class AnalyzeProjectUseCase:
         self,
         project_repository: ProjectRepository,
         parser_factory: ParserFactory,
-        dead_code_engine: Optional[DeadCodeEngine] = None,
+        dead_code_engine: Optional[Any] = None,
         security_analyzer: Optional[Any] = None
     ):
         """

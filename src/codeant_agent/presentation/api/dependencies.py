@@ -1,11 +1,10 @@
 """
 Dependencias compartidas para los endpoints de la API.
 """
-from typing import Optional
+from typing import Optional, Any
 
 from ...domain.repositories.project_repository import ProjectRepository
 from ...infrastructure.parsers.parser_factory import ParserFactory
-from ...infrastructure.dead_code_analysis.dead_code_engine import DeadCodeEngine
 
 # Para desarrollo, usaremos implementaciones mock o en memoria
 _project_repository = None
@@ -35,7 +34,7 @@ def get_parser_factory() -> ParserFactory:
     return _parser_factory
 
 
-def get_dead_code_engine() -> Optional[DeadCodeEngine]:
+def get_dead_code_engine() -> Optional[Any]:
     """Obtener instancia del motor de análisis de código muerto."""
     global _dead_code_engine
     
