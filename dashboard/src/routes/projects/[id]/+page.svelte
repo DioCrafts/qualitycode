@@ -227,7 +227,7 @@
                         </div>
 
                         <a
-                            href="/analysis/{projectId}"
+                            href={`/analysis/${projectId}`}
                             class="btn-secondary view-details-btn"
                         >
                             Ver análisis completo
