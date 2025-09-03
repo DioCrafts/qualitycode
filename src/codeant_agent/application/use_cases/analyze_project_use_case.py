@@ -300,10 +300,16 @@ class AnalyzeProjectUseCase:
             unified_asts = []  # Guardar ASTs unificados para análisis cross-language
             parser = await get_universal_parser()
             
+            # Log de depuración
+            logger.info(f"Analizando archivos en: {project_path}")
+            file_count = 0
+            
             for root, dirs, files in os.walk(project_path):
                 for file in files:
                     if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.rs')):
+                        file_count += 1
                         file_path = Path(os.path.join(root, file))
+                        logger.debug(f"Analizando archivo {file_count}: {file_path}")
                         try:
                             # Usar parser especializado según el lenguaje
                             if file.endswith(('.js', '.ts', '.jsx', '.tsx')):
@@ -398,6 +404,11 @@ class AnalyzeProjectUseCase:
                                         
                         except Exception as e:
                             logger.debug(f"Error analizando {file_path}: {str(e)}")
+            
+            # Log de depuración
+            logger.info(f"Total de archivos analizados: {file_count}")
+            logger.info(f"Total de funciones encontradas: {total_functions}")
+            logger.info(f"Total de ASTs unificados creados: {len(unified_asts)}")
             
             # Análisis cross-language
             cross_language_results = {}
