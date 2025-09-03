@@ -29,7 +29,7 @@ from .dead_code.analyze_project_dead_code_use_case import (
 # from .security_use_cases import RunSecurityAnalysisUseCase  # TODO: Implementar cuando esté disponible
 
 # Import parsers reales
-from ...parsers import UniversalParser, get_universal_parser, ProgrammingLanguage
+# from ...parsers import UniversalParser, get_universal_parser, ProgrammingLanguage  # TODO: Habilitar cuando toml esté instalado
 
 logger = get_logger(__name__)
 
