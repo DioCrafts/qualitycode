@@ -175,10 +175,31 @@ class AnalyzeProjectUseCase:
                     )
                 )
             
-            # 3. Obtener la ruta del repositorio
-            # En una implementación real, esto vendría del repositorio clonado
-            # Por ahora usamos una ruta simulada
+            # 3. Obtener la ruta del repositorio y clonarlo si es necesario
             project_path = f"/tmp/codeant/projects/{project.id}"
+            
+            # Clonar el repositorio si no existe
+            import os
+            if not os.path.exists(project_path):
+                os.makedirs(project_path, exist_ok=True)
+                
+                # Si el proyecto tiene repository_url, clonarlo
+                if hasattr(project, 'repository_url') and project.repository_url:
+                    logger.info(f"Clonando repositorio {project.repository_url}...")
+                    try:
+                        import subprocess
+                        result = subprocess.run(
+                            ['git', 'clone', '--depth', '1', project.repository_url, project_path],
+                            capture_output=True,
+                            text=True,
+                            timeout=300  # 5 minutos máximo
+                        )
+                        if result.returncode != 0:
+                            logger.error(f"Error clonando repositorio: {result.stderr}")
+                            # Continuar con análisis vacío si falla el clone
+                    except Exception as e:
+                        logger.error(f"Error clonando repositorio: {str(e)}")
+                        # Continuar con análisis vacío si falla el clone
             
             # 4. Ejecutar análisis en paralelo
             tasks = []
