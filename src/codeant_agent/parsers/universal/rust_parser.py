@@ -334,7 +334,55 @@ class RustSemanticAnalyzer:
     def _extract_functions(self, tree: Any) -> List[RustFunctionDefinition]:
         """Extrae definiciones de funciones."""
         functions = []
-        # Implementación básica - se expandirá
+        
+        # Si el tree es del fallback, extraer funciones con regex
+        if isinstance(tree, dict) and tree.get('content'):
+            content = tree['content']
+            
+            # Buscar funciones Rust (fn)
+            func_pattern = r'(?:pub\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?(?:extern\s+(?:"[^"]+"\s+)?)?fn\s+(\w+)\s*(?:<[^>]+>)?\s*\((.*?)\)(?:\s*->\s*([^\{]+))?'
+            
+            for match in re.finditer(func_pattern, content, re.DOTALL):
+                name = match.group(1)
+                params = match.group(2) if match.group(2) else ""
+                return_type = match.group(3).strip() if match.group(3) else "())"
+                start_line = content[:match.start()].count('\n') + 1
+                
+                # Analizar modificadores
+                full_match = match.group(0)
+                is_public = 'pub' in full_match
+                is_async = 'async' in full_match
+                is_unsafe = 'unsafe' in full_match
+                is_const = 'const' in full_match
+                
+                # Parsear parámetros
+                parameters = []
+                if params.strip():
+                    # Simplificado - en producción sería más complejo
+                    param_parts = params.split(',')
+                    for param in param_parts:
+                        param = param.strip()
+                        if ':' in param:
+                            param_name = param.split(':')[0].strip()
+                            param_type = param.split(':')[1].strip()
+                            parameters.append(f"{param_name}: {param_type}")
+                        else:
+                            parameters.append(param)
+                
+                functions.append(RustFunctionDefinition(
+                    name=name,
+                    start_line=start_line,
+                    end_line=start_line + 1,  # Aproximado
+                    parameters=parameters,
+                    return_type=return_type,
+                    is_public=is_public,
+                    is_async=is_async,
+                    is_unsafe=is_unsafe,
+                    is_const=is_const,
+                    generics=[],  # TODO: Parsear generics
+                    lifetimes=[]  # TODO: Parsear lifetimes
+                ))
+        
         return functions
     
     def _extract_structs(self, tree: Any) -> List[RustStructDefinition]:
@@ -392,8 +440,43 @@ class RustSemanticAnalyzer:
         metrics.impl_count = len(result.impls)
         metrics.macro_count = len(result.macro_info.macro_definitions) if result.macro_info else 0
         
-        # Complejidad ciclomática básica
-        metrics.cyclomatic_complexity = 1  # Base complexity
+        # Complejidad ciclomática mejorada para Rust
+        complexity = 1  # Base complexity
+        
+        # Contar estructuras de control
+        if_count = len(re.findall(r'\bif\b', content))
+        match_count = len(re.findall(r'\bmatch\b', content))
+        for_count = len(re.findall(r'\bfor\b', content))
+        while_count = len(re.findall(r'\bwhile\b', content))
+        loop_count = len(re.findall(r'\bloop\b', content))
+        
+        complexity += if_count + match_count + for_count + while_count + loop_count
+        
+        # Contar brazos de match (aproximado)
+        match_arm_count = len(re.findall(r'=>', content))
+        complexity += max(0, match_arm_count - match_count)  # Resta los matches ya contados
+        
+        # Contar operadores lógicos
+        and_count = len(re.findall(r'&&', content))
+        or_count = len(re.findall(r'\|\|', content))
+        
+        complexity += and_count + or_count
+        
+        # Contar ? operator (manejo de errores)
+        question_count = len(re.findall(r'\?(?![:])', content))  # ? pero no ?:
+        complexity += question_count
+        
+        metrics.cyclomatic_complexity = complexity
+        
+        # Calcular índice de mantenibilidad
+        if complexity > 0:
+            import math
+            metrics.maintainability_index = max(0, 171 - 5.2 * math.log(complexity) - 0.23 * complexity)
+        else:
+            metrics.maintainability_index = 100
+        
+        # Análisis específico de Rust
+        metrics.unsafe_usage_percentage = (metrics.unsafe_block_count / max(1, metrics.function_count)) * 100 if metrics.function_count > 0 else 0
         
         return metrics
 
@@ -489,7 +572,7 @@ class RustSpecializedParser(BaseParser):
         try:
             # Intentar cargar los lenguajes tree-sitter
             # Por ahora, usamos un método de fallback
-            logger.info("Using fallback parsing method for Rust")
+            logger.debug("Using regex-based parsing for Rust")
         except Exception as e:
             logger.warning(f"Could not setup tree-sitter: {e}")
             logger.info("Using fallback parsing method")

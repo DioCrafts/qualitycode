@@ -269,6 +269,28 @@ class PythonSemanticAnalyzer:
                     def visit_With(self, node):
                         self.complexity += 1
                         self.generic_visit(node)
+                    
+                    def visit_BoolOp(self, node):
+                        # And/Or operators add to complexity
+                        if isinstance(node.op, (ast.And, ast.Or)):
+                            self.complexity += len(node.values) - 1
+                        self.generic_visit(node)
+                    
+                    def visit_Lambda(self, node):
+                        self.complexity += 1
+                        self.generic_visit(node)
+                    
+                    def visit_ListComp(self, node):
+                        self.complexity += len(node.generators)
+                        self.generic_visit(node)
+                    
+                    def visit_DictComp(self, node):
+                        self.complexity += len(node.generators)
+                        self.generic_visit(node)
+                    
+                    def visit_SetComp(self, node):
+                        self.complexity += len(node.generators)
+                        self.generic_visit(node)
                 
                 visitor = ComplexityVisitor()
                 visitor.visit(node)

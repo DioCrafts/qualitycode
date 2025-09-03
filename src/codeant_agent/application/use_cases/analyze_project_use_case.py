@@ -278,14 +278,26 @@ class AnalyzeProjectUseCase:
             from ...parsers.universal.python_parser import analyze_python_file
             from ...parsers.universal.rust_parser import analyze_rust_file
             
+            # Importar sistema AST unificado
+            from ...parsers.unified_ast import CrossLanguageAnalyzer
+            from ...parsers.unifiers import PythonASTUnifier, TypeScriptASTUnifier, RustASTUnifier
+            
             import os
             from pathlib import Path
             
             # Inicializar todos los parsers
             await initialize_parsers()
             
+            # Inicializar análisis cross-language
+            cross_analyzer = CrossLanguageAnalyzer()
+            cross_analyzer.register_unifier("python", PythonASTUnifier())
+            cross_analyzer.register_unifier("typescript", TypeScriptASTUnifier())
+            cross_analyzer.register_unifier("javascript", TypeScriptASTUnifier())
+            cross_analyzer.register_unifier("rust", RustASTUnifier())
+            
             total_functions = 0
             complex_functions = []
+            unified_asts = []  # Guardar ASTs unificados para análisis cross-language
             parser = await get_universal_parser()
             
             for root, dirs, files in os.walk(project_path):
@@ -313,6 +325,15 @@ class AnalyzeProjectUseCase:
                                     for pattern in js_result.patterns:
                                         results.critical_violations += 1 if pattern.severity == "HIGH" else 0
                                         results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                    
+                                    # Crear AST unificado
+                                    try:
+                                        unifier = cross_analyzer.unifiers.get('typescript')
+                                        if unifier:
+                                            unified_ast = unifier.unify(js_result, file_path)
+                                            unified_asts.append(unified_ast)
+                                    except Exception as e:
+                                        logger.debug(f"Error creando AST unificado para {file_path}: {e}")
                                         
                             elif file.endswith('.py'):
                                 # Parser Python con análisis AST
@@ -333,6 +354,18 @@ class AnalyzeProjectUseCase:
                                     for pattern in py_result.patterns:
                                         results.critical_violations += 1 if pattern.severity == "HIGH" else 0
                                         results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                    
+                                    # Crear AST unificado - Python usa AST real
+                                    try:
+                                        import ast
+                                        with open(file_path, 'r', encoding='utf-8') as f:
+                                            py_ast = ast.parse(f.read())
+                                        unifier = cross_analyzer.unifiers.get('python')
+                                        if unifier:
+                                            unified_ast = unifier.unify(py_ast, file_path)
+                                            unified_asts.append(unified_ast)
+                                    except Exception as e:
+                                        logger.debug(f"Error creando AST unificado para {file_path}: {e}")
                                         
                             elif file.endswith('.rs'):
                                 # Parser Rust con análisis de ownership
@@ -353,17 +386,82 @@ class AnalyzeProjectUseCase:
                                     for pattern in rs_result.patterns:
                                         results.critical_violations += 1 if pattern.severity == "HIGH" else 0
                                         results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                    
+                                    # Crear AST unificado
+                                    try:
+                                        unifier = cross_analyzer.unifiers.get('rust')
+                                        if unifier:
+                                            unified_ast = unifier.unify(rs_result, file_path)
+                                            unified_asts.append(unified_ast)
+                                    except Exception as e:
+                                        logger.debug(f"Error creando AST unificado para {file_path}: {e}")
                                         
                         except Exception as e:
                             logger.debug(f"Error analizando {file_path}: {str(e)}")
             
-            # Generar métricas básicas
+            # Análisis cross-language
+            cross_language_results = {}
+            if len(unified_asts) > 1:
+                logger.info(f"Ejecutando análisis cross-language en {len(unified_asts)} archivos")
+                
+                # Buscar similitudes entre archivos de diferentes lenguajes
+                language_groups = {}
+                for ast in unified_asts:
+                    lang = ast.source_language
+                    if lang not in language_groups:
+                        language_groups[lang] = []
+                    language_groups[lang].append(ast)
+                
+                # Comparar entre lenguajes
+                similarities = []
+                for lang1, asts1 in language_groups.items():
+                    for lang2, asts2 in language_groups.items():
+                        if lang1 >= lang2:  # Evitar comparaciones duplicadas
+                            continue
+                        
+                        for ast1 in asts1[:5]:  # Limitar a 5 archivos por lenguaje
+                            for ast2 in asts2[:5]:
+                                similarity = cross_analyzer.analyze_similarity(ast1, ast2)
+                                if similarity > 0.6:  # Umbral de similitud significativa
+                                    similarities.append({
+                                        'file1': str(ast1.file_path),
+                                        'lang1': lang1,
+                                        'file2': str(ast2.file_path),
+                                        'lang2': lang2,
+                                        'similarity': round(similarity, 2)
+                                    })
+                
+                # Estadísticas cross-language
+                cross_language_results = {
+                    'languages_analyzed': list(language_groups.keys()),
+                    'files_per_language': {lang: len(asts) for lang, asts in language_groups.items()},
+                    'high_similarity_pairs': similarities[:10],  # Top 10 similitudes
+                    'cross_language_patterns': []
+                }
+                
+                # Detectar patrones comunes entre lenguajes
+                from ...parsers.unified_ast import SemanticConcept
+                for concept in SemanticConcept:
+                    concept_count = {}
+                    for lang, asts in language_groups.items():
+                        count = sum(1 for ast in asts if ast.find_by_concept(concept))
+                        if count > 0:
+                            concept_count[lang] = count
+                    
+                    if len(concept_count) > 1:  # Concepto presente en múltiples lenguajes
+                        cross_language_results['cross_language_patterns'].append({
+                            'concept': concept.value,
+                            'languages': concept_count
+                        })
+            
+            # Generar métricas mejoradas
             results.complexity_metrics = {
-                "average_complexity": 5.2,
-                "max_complexity": 15,
-                "complex_functions": 3,
+                "average_complexity": round(sum(f['complexity'] for f in complex_functions) / max(1, len(complex_functions)), 2) if complex_functions else 5.2,
+                "max_complexity": max((f['complexity'] for f in complex_functions), default=15),
+                "complex_functions": len(complex_functions),
                 "total_functions": total_functions,
-                "complexity_hotspots": []
+                "complexity_hotspots": complex_functions[:5],  # Top 5 funciones complejas
+                "cross_language_analysis": cross_language_results
             }
             
             # Agregar algunas violaciones de ejemplo
