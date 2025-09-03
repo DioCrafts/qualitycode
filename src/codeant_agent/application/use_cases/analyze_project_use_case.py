@@ -270,33 +270,92 @@ class AnalyzeProjectUseCase:
     async def _analyze_complexity(self, project_path: str, results: AnalysisResults):
         """Analizar complejidad del código."""
         try:
-            logger.info("Ejecutando análisis de complejidad básico...")
+            logger.info("Ejecutando análisis de complejidad con parsers especializados...")
             
-            # Análisis básico mientras integramos los analizadores reales
+            # Importar los parsers existentes
+            from ...parsers.universal import get_universal_parser, initialize_parsers
+            from ...parsers.universal.typescript_parser import analyze_typescript_file
+            from ...parsers.universal.python_parser import analyze_python_file
+            from ...parsers.universal.rust_parser import analyze_rust_file
+            
             import os
+            from pathlib import Path
+            
+            # Inicializar todos los parsers
+            await initialize_parsers()
+            
             total_functions = 0
             complex_functions = []
+            parser = await get_universal_parser()
             
             for root, dirs, files in os.walk(project_path):
                 for file in files:
                     if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.rs')):
-                        file_path = os.path.join(root, file)
+                        file_path = Path(os.path.join(root, file))
                         try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                                # Contar funciones básicamente
-                                if file.endswith('.py'):
-                                    total_functions += content.count('def ')
-                                elif file.endswith(('.js', '.ts', '.jsx', '.tsx')):
-                                    total_functions += content.count('function ')
-                                    total_functions += content.count('=>')
-                                elif file.endswith('.rs'):
-                                    total_functions += content.count('fn ')
-                                
-                                results.files_analyzed += 1
-                                results.total_lines += len(content.splitlines())
-                        except:
-                            pass
+                            # Usar parser especializado según el lenguaje
+                            if file.endswith(('.js', '.ts', '.jsx', '.tsx')):
+                                # Parser TypeScript/JavaScript
+                                js_result = await analyze_typescript_file(file_path)
+                                if js_result.metrics:
+                                    total_functions += js_result.metrics.total_functions
+                                    results.files_analyzed += 1
+                                    results.total_lines += js_result.metrics.total_lines
+                                    
+                                    # Añadir métricas de complejidad
+                                    if js_result.metrics.cyclomatic_complexity > 10:
+                                        complex_functions.append({
+                                            "file": str(file_path),
+                                            "complexity": js_result.metrics.cyclomatic_complexity
+                                        })
+                                        
+                                    # Detectar patrones problemáticos
+                                    for pattern in js_result.patterns:
+                                        results.critical_violations += 1 if pattern.severity == "HIGH" else 0
+                                        results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                        
+                            elif file.endswith('.py'):
+                                # Parser Python con análisis AST
+                                py_result = await analyze_python_file(file_path)
+                                if py_result.metrics:
+                                    total_functions += py_result.metrics.total_functions
+                                    results.files_analyzed += 1
+                                    results.total_lines += py_result.metrics.total_lines
+                                    
+                                    # Métricas de complejidad Python
+                                    if py_result.metrics.cyclomatic_complexity > 10:
+                                        complex_functions.append({
+                                            "file": str(file_path),
+                                            "complexity": py_result.metrics.cyclomatic_complexity
+                                        })
+                                    
+                                    # Patrones Python específicos
+                                    for pattern in py_result.patterns:
+                                        results.critical_violations += 1 if pattern.severity == "HIGH" else 0
+                                        results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                        
+                            elif file.endswith('.rs'):
+                                # Parser Rust con análisis de ownership
+                                rs_result = await analyze_rust_file(file_path)
+                                if rs_result.metrics:
+                                    total_functions += rs_result.metrics.total_functions
+                                    results.files_analyzed += 1
+                                    results.total_lines += rs_result.metrics.total_lines
+                                    
+                                    # Métricas específicas de Rust
+                                    if rs_result.metrics.cyclomatic_complexity > 10:
+                                        complex_functions.append({
+                                            "file": str(file_path),
+                                            "complexity": rs_result.metrics.cyclomatic_complexity
+                                        })
+                                    
+                                    # Patrones Rust (ownership, unsafe, etc.)
+                                    for pattern in rs_result.patterns:
+                                        results.critical_violations += 1 if pattern.severity == "HIGH" else 0
+                                        results.high_violations += 1 if pattern.severity == "MEDIUM" else 0
+                                        
+                        except Exception as e:
+                            logger.debug(f"Error analizando {file_path}: {str(e)}")
             
             # Generar métricas básicas
             results.complexity_metrics = {
