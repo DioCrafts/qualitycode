@@ -119,6 +119,7 @@
     }
 
     function openProjectDetails(projectId) {
+        console.log(`Navegando a los detalles del proyecto ${projectId}`);
         goto(`/projects/${projectId}`);
     }
 </script>
