@@ -1,25 +1,73 @@
-# Backend Dockerfile
-FROM python:3.11-slim
-
+# syntax=docker/dockerfile:1.7   # <- Activa cachés --mount (BuildKit)
+############################################
+# 1) Stage: deps (resolver y construir wheels una sola vez)
+############################################
+FROM python:3.11-slim AS deps
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    gcc \
-    git \
+# Paquetes del sistema SOLO para compilar deps (no irán a la imagen final)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+      build-essential gcc git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar archivos necesarios para la instalación
-COPY pyproject.toml .
-COPY README.md .
+# Copia SOLO metadata para maximizar cache (NO copies src aún)
+COPY pyproject.toml README.md ./
+
+# (Opcional pero recomendado) Fijar versiones con pip-tools para cache estable
+# Genera requisitos a partir de pyproject (sin extras dev)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install --upgrade pip pip-tools build wheel
+
+# Extrae deps de pyproject -> requirements.in
+RUN python - <<'PY'
+import tomllib, pathlib
+data = tomllib.loads(pathlib.Path("pyproject.toml").read_bytes())
+reqs = data["project"]["dependencies"]
+pathlib.Path("requirements.in").write_text("\n".join(reqs) + "\n")
+PY
+
+# Resuelve versiones y construye wheelhouse de TODAS las deps
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip-compile requirements.in -o requirements.txt --resolver=backtracking --quiet && \
+    pip wheel -r requirements.txt -w /wheels
+
+############################################
+# 2) Stage: app (empaqueta la app sin arrastrar toolchain)
+############################################
+FROM python:3.11-slim AS runtime
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+WORKDIR /app
+
+# Solo libs de runtime (sin compilar). Añade las que tu app necesite en ejecución.
+# Si usas asyncpg en runtime, añade libpq5; si usas tree-sitter, no suele requerir nada extra.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+      libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instala deps desde wheelhouse (ultra-rápido y reproducible)
+COPY --from=deps /wheels /wheels
+COPY --from=deps /app/requirements.txt /app/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-index --find-links=/wheels -r requirements.txt && \
+    rm -rf /wheels
+
+# Ahora sí: copia el código (cambiar código NO fuerza reinstalar deps)
 COPY src/ ./src/
 
-# Instalar dependencias
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+# Instala tu paquete SIN volver a resolver deps
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-deps --no-build-isolation .
 
-# Puerto
 EXPOSE 8000
-
-# Comando por defecto
 CMD ["uvicorn", "src.codeant_agent.main:app", "--host", "0.0.0.0", "--port", "8000"]
