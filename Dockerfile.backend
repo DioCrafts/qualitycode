@@ -1,5 +1,5 @@
 # Backend Dockerfile optimizado
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Configurar variables de entorno para optimizar pip
 ENV PYTHONUNBUFFERED=1 \
@@ -12,7 +12,7 @@ WORKDIR /app
 # ============================================
 # Stage 1: Instalar dependencias del sistema
 # ============================================
-FROM base as system-deps
+FROM base AS system-deps
 
 # Instalar dependencias del sistema (esta capa se cachea bien)
 RUN apt-get update && apt-get install -y \
@@ -26,7 +26,7 @@ RUN pip install --upgrade pip
 # ============================================
 # Stage 2: Instalar dependencias Python
 # ============================================
-FROM system-deps as python-deps
+FROM system-deps AS python-deps
 
 # CLAVE: Copiar SOLO los archivos de configuración primero
 # Esto permite que Docker cache la instalación de dependencias
@@ -38,12 +38,13 @@ RUN mkdir -p src/codeant_agent && \
     touch src/codeant_agent/__init__.py
 
 # Instalar dependencias (se cachea mientras no cambien pyproject.toml)
-RUN pip install -e .
+# PyTorch requiere el repositorio específico para versiones +cpu
+RUN pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ============================================
 # Stage 3: Agregar código fuente
 # ============================================
-FROM python-deps as final
+FROM python-deps AS final
 
 # Ahora copiar el código fuente (esto se invalida frecuentemente)
 COPY src/ ./src/

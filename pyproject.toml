@@ -37,7 +37,6 @@ dependencies = [
     "libcst>=1.1.0",
 
     # AI/ML (CPU)
-    "torch==2.1.0+cpu",
     "transformers>=4.36.0",
     "sentence-transformers>=2.2.0",
 
