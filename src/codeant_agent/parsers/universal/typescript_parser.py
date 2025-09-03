@@ -222,7 +222,51 @@ class TypeScriptSemanticAnalyzer:
     def _extract_functions(self, tree: Any) -> List[JSFunctionDefinition]:
         """Extrae definiciones de funciones."""
         functions = []
-        # Implementación básica - se expandirá
+        
+        # Si el tree es del fallback, extraer funciones con regex
+        if isinstance(tree, dict) and tree.get('content'):
+            content = tree['content']
+            
+            # Buscar funciones tradicionales
+            func_pattern = r'(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\((.*?)\)'
+            for match in re.finditer(func_pattern, content):
+                name = match.group(1)
+                params = match.group(2)
+                start_line = content[:match.start()].count('\n') + 1
+                
+                func_def = JSFunctionDefinition(
+                    name=name,
+                    start_line=start_line,
+                    end_line=start_line + 1,  # Aproximado
+                    is_async='async' in match.group(0),
+                    parameters=[p.strip() for p in params.split(',') if p.strip()],
+                    return_annotation=None
+                )
+                # Guardar metadatos adicionales
+                func_def.is_exported = 'export' in match.group(0)
+                functions.append(func_def)
+            
+            # Buscar arrow functions
+            arrow_pattern = r'(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\((.*?)\)\s*(?::\s*([^=]+?))?\s*=>'
+            for match in re.finditer(arrow_pattern, content):
+                name = match.group(1)
+                params = match.group(2)
+                return_type = match.group(3)
+                start_line = content[:match.start()].count('\n') + 1
+                
+                func_def = JSFunctionDefinition(
+                    name=name,
+                    start_line=start_line,
+                    end_line=start_line + 1,  # Aproximado
+                    is_async='async' in match.group(0),
+                    parameters=[p.strip() for p in params.split(',') if p.strip()],
+                    return_annotation=return_type.strip() if return_type else None
+                )
+                # Guardar metadatos adicionales
+                func_def.is_exported = 'export' in match.group(0)
+                func_def.is_arrow_function = True
+                functions.append(func_def)
+        
         return functions
     
     def _extract_classes(self, tree: Any) -> List[JSClassDefinition]:
@@ -267,8 +311,33 @@ class TypeScriptSemanticAnalyzer:
         metrics.export_count = len(result.exports)
         metrics.type_annotation_count = len(result.types)
         
-        # Complejidad ciclomática básica
-        metrics.cyclomatic_complexity = 1  # Base complexity
+        # Complejidad ciclomática mejorada
+        complexity = 1  # Base complexity
+        
+        # Contar estructuras de control
+        if_count = len(re.findall(r'\bif\b', content))
+        for_count = len(re.findall(r'\bfor\b', content))
+        while_count = len(re.findall(r'\bwhile\b', content))
+        case_count = len(re.findall(r'\bcase\b', content))
+        catch_count = len(re.findall(r'\bcatch\b', content))
+        
+        complexity += if_count + for_count + while_count + case_count + catch_count
+        
+        # Contar operadores lógicos
+        and_count = len(re.findall(r'&&', content))
+        or_count = len(re.findall(r'\|\|', content))
+        ternary_count = len(re.findall(r'\?.*:', content))
+        
+        complexity += and_count + or_count + ternary_count
+        
+        metrics.cyclomatic_complexity = complexity
+        
+        # Calcular índice de mantenibilidad
+        if complexity > 0:
+            import math
+            metrics.maintainability_index = max(0, 171 - 5.2 * math.log(complexity) - 0.23 * complexity)
+        else:
+            metrics.maintainability_index = 100
         
         return metrics
 
@@ -357,7 +426,7 @@ class TypeScriptSpecializedParser(BaseParser):
         try:
             # Intentar cargar los lenguajes tree-sitter
             # Por ahora, usamos un método de fallback
-            logger.info("Using fallback parsing method for TypeScript/JavaScript")
+            logger.debug("Using regex-based parsing for TypeScript/JavaScript")
         except Exception as e:
             logger.warning(f"Could not setup tree-sitter: {e}")
             logger.info("Using fallback parsing method")

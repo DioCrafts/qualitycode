@@ -196,7 +196,11 @@ async def run_analysis(
             project_id=request.projectId,
             config=request.config.dict() if request.config else {},
             force_full_analysis=request.config.forceFullAnalysis if request.config else False,
-            include_metrics=request.config.includeMetrics if request.config else True
+            include_metrics=request.config.includeMetrics if request.config else True,
+            include_complexity=True,  # Siempre incluir análisis de complejidad
+            include_dead_code=True,
+            include_security=True,
+            include_duplicates=True
         )
         
         # Crear ID único para el análisis
