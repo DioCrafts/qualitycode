@@ -343,7 +343,10 @@ class AnalyzeProjectUseCase:
                                         
                             elif file.endswith('.py'):
                                 # Parser Python con análisis AST
+                                logger.debug(f"Analizando archivo Python: {file_path}")
                                 py_result = await analyze_python_file(file_path)
+                                logger.debug(f"Resultado del análisis Python: metrics={py_result.metrics is not None}, "
+                                           f"functions={len(py_result.functions) if py_result.functions else 0}")
                                 if py_result.metrics:
                                     total_functions += py_result.metrics.total_functions
                                     results.files_analyzed += 1
@@ -403,7 +406,8 @@ class AnalyzeProjectUseCase:
                                         logger.debug(f"Error creando AST unificado para {file_path}: {e}")
                                         
                         except Exception as e:
-                            logger.debug(f"Error analizando {file_path}: {str(e)}")
+                            logger.error(f"Error analizando {file_path}: {str(e)}")
+                            logger.exception("Detalles del error:")
             
             # Log de depuración
             logger.info(f"Total de archivos analizados: {file_count}")
