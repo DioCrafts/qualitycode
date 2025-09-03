@@ -12,24 +12,6 @@ from ...domain.value_objects.project_id import ProjectId
 from ...domain.repositories.project_repository import ProjectRepository
 from ...utils.error import Result, BaseError
 from ...utils.logging import get_logger
-
-# Import analizadores existentes
-from ...infrastructure.metrics_analysis.complexity_analyzer import ComplexityAnalyzer
-from ...infrastructure.metrics_analysis.quality_analyzer import QualityAnalyzer
-from ...infrastructure.metrics_analysis.coupling_analyzer import CouplingAnalyzer
-from ...infrastructure.metrics_analysis.cohesion_analyzer import CohesionAnalyzer
-from ...infrastructure.metrics_analysis.size_analyzer import SizeAnalyzer
-
-# Import casos de uso específicos
-from .dead_code.analyze_project_dead_code_use_case import (
-    AnalyzeProjectDeadCodeUseCase,
-    AnalyzeProjectDeadCodeRequest
-)
-from .security_use_cases import RunSecurityAnalysisUseCase
-
-# Import servicios de dominio
-from ...domain.services.dead_code_service import DeadCodeService
-from ...infrastructure.dead_code_analysis.dead_code_engine import DeadCodeEngine
 from ...infrastructure.parsers.parser_factory import ParserFactory
 
 logger = get_logger(__name__)
@@ -108,9 +90,7 @@ class AnalyzeProjectUseCase:
     def __init__(
         self,
         project_repository: ProjectRepository,
-        parser_factory: ParserFactory,
-        dead_code_engine: Optional[DeadCodeEngine] = None,
-        security_analyzer: Optional[Any] = None
+        parser_factory: Optional[ParserFactory] = None
     ):
         """
         Inicializar el caso de uso.
@@ -118,22 +98,9 @@ class AnalyzeProjectUseCase:
         Args:
             project_repository: Repositorio de proyectos
             parser_factory: Factory para crear parsers
-            dead_code_engine: Motor de análisis de código muerto
-            security_analyzer: Analizador de seguridad
         """
         self.project_repository = project_repository
         self.parser_factory = parser_factory
-        
-        # Inicializar analizadores de métricas
-        self.complexity_analyzer = ComplexityAnalyzer()
-        self.quality_analyzer = QualityAnalyzer()
-        self.coupling_analyzer = CouplingAnalyzer()
-        self.cohesion_analyzer = CohesionAnalyzer()
-        self.size_analyzer = SizeAnalyzer()
-        
-        # Analizadores opcionales
-        self.dead_code_engine = dead_code_engine
-        self.security_analyzer = security_analyzer
     
     async def execute(self, request: AnalyzeProjectRequest) -> Result[AnalysisResults, Exception]:
         """
@@ -180,26 +147,23 @@ class AnalyzeProjectUseCase:
             # Por ahora usamos una ruta simulada
             project_path = f"/tmp/codeant/projects/{project.id}"
             
-            # 4. Ejecutar análisis en paralelo
-            tasks = []
+            # 4. Ejecutar análisis
+            # En esta versión simplificada, ejecutamos los análisis secuencialmente
             
             if request.include_complexity:
-                tasks.append(self._analyze_complexity(project_path, results))
+                await self._analyze_complexity(project_path, results)
             
             if request.include_metrics:
-                tasks.append(self._analyze_quality_metrics(project_path, results))
+                await self._analyze_quality_metrics(project_path, results)
             
-            if request.include_dead_code and self.dead_code_engine:
-                tasks.append(self._analyze_dead_code(project, project_path, results))
+            if request.include_dead_code:
+                await self._analyze_dead_code(project, project_path, results)
             
-            if request.include_security and self.security_analyzer:
-                tasks.append(self._analyze_security(project_path, results))
+            if request.include_security:
+                await self._analyze_security(project_path, results)
             
             if request.include_duplicates:
-                tasks.append(self._analyze_duplicates(project_path, results))
-            
-            # Ejecutar todos los análisis en paralelo
-            await asyncio.gather(*tasks, return_exceptions=True)
+                await self._analyze_duplicates(project_path, results)
             
             # 5. Calcular puntuación final de calidad
             results.quality_score = self._calculate_quality_score(results)
