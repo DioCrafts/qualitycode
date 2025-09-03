@@ -4,7 +4,6 @@ Dependencias compartidas para los endpoints de la API.
 from typing import Optional, Any
 
 from ...domain.repositories.project_repository import ProjectRepository
-from ...infrastructure.parsers.parser_factory import ParserFactory
 
 # Para desarrollo, usaremos implementaciones mock o en memoria
 _project_repository = None
@@ -24,12 +23,13 @@ def get_project_repository() -> ProjectRepository:
     return _project_repository
 
 
-def get_parser_factory() -> ParserFactory:
+def get_parser_factory() -> Optional[Any]:
     """Obtener instancia del parser factory."""
     global _parser_factory
     
     if _parser_factory is None:
-        _parser_factory = ParserFactory()
+        # Por ahora retornamos None hasta que tengamos la implementación
+        return None
     
     return _parser_factory
 
@@ -45,7 +45,7 @@ def get_dead_code_engine() -> Optional[Any]:
     return _dead_code_engine
 
 
-def get_analyze_project_use_case() -> AnalyzeProjectUseCase:
+def get_analyze_project_use_case():
     """Obtener instancia del caso de uso de análisis."""
     from ...application.use_cases.analyze_project_use_case import AnalyzeProjectUseCase
     
