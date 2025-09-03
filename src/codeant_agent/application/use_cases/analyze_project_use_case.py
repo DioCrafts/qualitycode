@@ -314,9 +314,9 @@ class AnalyzeProjectUseCase:
                             # Usar parser especializado según el lenguaje
                             if file.endswith(('.js', '.ts', '.jsx', '.tsx')):
                                 # Parser TypeScript/JavaScript
-                                logger.debug(f"Analizando archivo TypeScript/JavaScript: {file_path}")
+                                logger.info(f"Analizando archivo TypeScript/JavaScript: {file_path}")
                                 js_result = await analyze_typescript_file(file_path)
-                                logger.debug(f"Resultado del análisis TS/JS: metrics={js_result.metrics is not None}, "
+                                logger.info(f"Resultado del análisis TS/JS: metrics={js_result.metrics is not None}, "
                                            f"functions={len(js_result.functions) if js_result.functions else 0}")
                                 if js_result.metrics:
                                     total_functions += js_result.metrics.function_count
@@ -341,15 +341,15 @@ class AnalyzeProjectUseCase:
                                         if unifier:
                                             unified_ast = unifier.unify(js_result, file_path)
                                             unified_asts.append(unified_ast)
-                                            logger.debug(f"AST unificado creado para TS/JS: {file_path}")
+                                            logger.info(f"AST unificado creado para TS/JS: {file_path}")
                                     except Exception as e:
                                         logger.error(f"Error creando AST unificado TS/JS para {file_path}: {e}")
                                         
                             elif file.endswith('.py'):
                                 # Parser Python con análisis AST
-                                logger.debug(f"Analizando archivo Python: {file_path}")
+                                logger.info(f"Analizando archivo Python: {file_path}")
                                 py_result = await analyze_python_file(file_path)
-                                logger.debug(f"Resultado del análisis Python: metrics={py_result.metrics is not None}, "
+                                logger.info(f"Resultado del análisis Python: metrics={py_result.metrics is not None}, "
                                            f"functions={len(py_result.functions) if py_result.functions else 0}")
                                 if py_result.metrics:
                                     total_functions += py_result.metrics.function_count
@@ -377,15 +377,15 @@ class AnalyzeProjectUseCase:
                                         if unifier:
                                             unified_ast = unifier.unify(py_ast, file_path)
                                             unified_asts.append(unified_ast)
-                                            logger.debug(f"AST unificado creado para Python: {file_path}")
+                                            logger.info(f"AST unificado creado para Python: {file_path}")
                                     except Exception as e:
                                         logger.error(f"Error creando AST unificado Python para {file_path}: {e}")
                                         
                             elif file.endswith('.rs'):
                                 # Parser Rust con análisis de ownership
-                                logger.debug(f"Analizando archivo Rust: {file_path}")
+                                logger.info(f"Analizando archivo Rust: {file_path}")
                                 rs_result = await analyze_rust_file(file_path)
-                                logger.debug(f"Resultado del análisis Rust: metrics={rs_result.metrics is not None}, "
+                                logger.info(f"Resultado del análisis Rust: metrics={rs_result.metrics is not None}, "
                                            f"functions={len(rs_result.functions) if rs_result.functions else 0}")
                                 if rs_result.metrics:
                                     total_functions += rs_result.metrics.function_count
@@ -410,7 +410,7 @@ class AnalyzeProjectUseCase:
                                         if unifier:
                                             unified_ast = unifier.unify(rs_result, file_path)
                                             unified_asts.append(unified_ast)
-                                            logger.debug(f"AST unificado creado para Rust: {file_path}")
+                                            logger.info(f"AST unificado creado para Rust: {file_path}")
                                     except Exception as e:
                                         logger.error(f"Error creando AST unificado Rust para {file_path}: {e}")
                                         
@@ -430,7 +430,7 @@ class AnalyzeProjectUseCase:
                 
                 # Debug: mostrar qué archivos se van a analizar
                 for ast in unified_asts:
-                    logger.debug(f"AST unificado: {ast.file_path} ({ast.source_language})")
+                    logger.info(f"AST unificado: {ast.file_path} ({ast.source_language})")
                 
                 # Buscar similitudes entre archivos de diferentes lenguajes
                 language_groups = {}
@@ -451,7 +451,7 @@ class AnalyzeProjectUseCase:
                             for ast2 in asts2[:5]:
                                 similarity = cross_analyzer.analyze_similarity(ast1, ast2)
                                 if similarity > 0.6:  # Umbral de similitud significativa
-                                    logger.debug(f"Similitud encontrada ({similarity:.2f}): "
+                                    logger.info(f"Similitud encontrada ({similarity:.2f}): "
                                                f"{ast1.file_path} ({lang1}) <-> {ast2.file_path} ({lang2})")
                                     similarities.append({
                                         'file1': str(ast1.file_path),
@@ -483,7 +483,7 @@ class AnalyzeProjectUseCase:
                             'concept': concept.value,
                             'languages': concept_count
                         })
-                        logger.debug(f"Patrón cross-language encontrado: {concept.value} en {list(concept_count.keys())}")
+                        logger.info(f"Patrón cross-language encontrado: {concept.value} en {list(concept_count.keys())}")
             
             # Generar métricas mejoradas
             results.complexity_metrics = {
