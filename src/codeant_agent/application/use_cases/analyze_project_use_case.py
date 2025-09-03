@@ -28,7 +28,6 @@ from .dead_code.analyze_project_dead_code_use_case import (
 # from .security_use_cases import RunSecurityAnalysisUseCase  # TODO: Implementar cuando esté disponible
 
 # Import servicios de dominio
-from ...domain.services.dead_code_service import DeadCodeService
 from ...infrastructure.dead_code_analysis.dead_code_engine import DeadCodeEngine
 from ...infrastructure.parsers.parser_factory import ParserFactory
 
