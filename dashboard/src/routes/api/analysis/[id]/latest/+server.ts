@@ -9,7 +9,7 @@ export const GET = (async ({ params, fetch }) => {
 
         // Intentar obtener del backend real
         const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
-        const response = await fetch(`${apiUrl}/api/v1/projects/${projectId}/analysis/latest`, {
+        const response = await fetch(`${apiUrl}/api/projects/${projectId}/analysis/latest`, {
             headers: {
                 'Accept': 'application/json'
             }

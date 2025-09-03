@@ -10,13 +10,16 @@ export const POST = (async ({ request, fetch }) => {
 
         // Enviar solicitud al backend real
         const apiUrl = process.env.PUBLIC_API_URL || 'http://backend:8000';
-        const response = await fetch(`${apiUrl}/api/v1/projects/${projectId}/analyze`, {
+        const response = await fetch(`${apiUrl}/api/analysis/run`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify(config)
+            body: JSON.stringify({
+                projectId,
+                config
+            })
         });
 
         if (response.ok) {
