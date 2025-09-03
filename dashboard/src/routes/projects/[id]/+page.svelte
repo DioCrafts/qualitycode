@@ -37,9 +37,19 @@
     // Verificar si ya existen análisis para este proyecto
     async function checkExistingAnalysis() {
         try {
-            const response = await fetch(`/api/analysis/${projectId}/latest`);
+            const response = await fetch(
+                `/api/projects/${projectId}/analysis/latest`,
+            );
             if (response.ok) {
                 analysisResults = await response.json();
+                // Si el análisis existe y tiene resultados, extraerlos
+                if (analysisResults && analysisResults.result) {
+                    // Fusionar los resultados del análisis con el objeto principal
+                    analysisResults = {
+                        ...analysisResults,
+                        ...analysisResults.result,
+                    };
+                }
             }
         } catch (e) {
             console.error("Error comprobando análisis existentes:", e);
@@ -68,22 +78,25 @@
             });
 
             if (response.ok) {
-                analysisResults = await response.json();
+                const initialResponse = await response.json();
+                console.log("Análisis iniciado:", initialResponse);
+
+                // Esperar un poco y luego recuperar los resultados
+                setTimeout(async () => {
+                    await checkExistingAnalysis();
+                    analysisInProgress = false;
+                }, 5000); // Esperar 5 segundos para que termine el análisis
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 error = `Error iniciando análisis: ${errorData.detail || response.status}`;
+                analysisInProgress = false;
             }
         } catch (e) {
             console.error("Error al iniciar análisis:", e);
             error = e.message;
+            analysisInProgress = false;
         } finally {
             analyzing = false;
-            // En un entorno real, aquí comenzaríamos a sondear el estado del análisis
-            // Para esta demo, simplemente marcamos como completado después de un retraso
-            setTimeout(() => {
-                analysisInProgress = false;
-                // Aquí normalmente recuperaríamos los resultados finales del servidor
-            }, 3000);
         }
     }
 </script>

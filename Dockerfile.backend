@@ -1,22 +1,53 @@
-# Backend Dockerfile
-FROM python:3.11-slim
+# Backend Dockerfile optimizado
+FROM python:3.11-slim AS base
+
+# Configurar variables de entorno para optimizar pip
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
+# ============================================
+# Stage 1: Instalar dependencias del sistema
+# ============================================
+FROM base AS system-deps
+
+# Instalar dependencias del sistema (esta capa se cachea bien)
 RUN apt-get update && apt-get install -y \
     gcc \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar archivos necesarios para la instalación
+# Upgrade pip una sola vez
+RUN pip install --upgrade pip
+
+# ============================================
+# Stage 2: Instalar dependencias Python
+# ============================================
+FROM system-deps AS python-deps
+
+# CLAVE: Copiar SOLO los archivos de configuración primero
+# Esto permite que Docker cache la instalación de dependencias
 COPY pyproject.toml .
 COPY README.md .
-COPY src/ ./src/
 
-# Instalar dependencias
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+# Crear directorio src vacío para que setuptools no falle
+RUN mkdir -p src/codeant_agent && \
+    touch src/codeant_agent/__init__.py
+
+# Instalar dependencias (se cachea mientras no cambien pyproject.toml)
+# PyTorch requiere el repositorio específico para versiones +cpu
+RUN pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
+
+# ============================================
+# Stage 3: Agregar código fuente
+# ============================================
+FROM python-deps AS final
+
+# Ahora copiar el código fuente (esto se invalida frecuentemente)
+COPY src/ ./src/
 
 # Puerto
 EXPOSE 8000

@@ -12,7 +12,7 @@ from ....domain.entities.parse_result import ParseResult
 from ....domain.repositories.dead_code_repository import DeadCodeRepository
 from ....domain.repositories.parser_repository import ParserRepository
 from ....domain.services.dead_code_service import DeadCodeClassificationService
-from ....utils.result import Result, BaseError
+from ....utils.error import Result, BaseError
 
 logger = logging.getLogger(__name__)
 
