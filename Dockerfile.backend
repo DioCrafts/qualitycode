@@ -1,6 +1,7 @@
-# syntax=docker/dockerfile:1.7   # <- Activa cachés --mount (BuildKit)
+# syntax=docker/dockerfile:1.7
+
 ############################################
-# 1) Stage: deps (resolver y construir wheels una sola vez)
+# 1) Stage: deps (resolver y construir wheels)
 ############################################
 FROM python:3.11-slim AS deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -9,36 +10,37 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Paquetes del sistema SOLO para compilar deps (no irán a la imagen final)
+# Toolchain para compilar deps (no va a la imagen final)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
       build-essential gcc git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia SOLO metadata para maximizar cache (NO copies src aún)
+# Copiamos solo metadata para maximizar caché
 COPY pyproject.toml README.md ./
 
-# (Opcional pero recomendado) Fijar versiones con pip-tools para cache estable
-# Genera requisitos a partir de pyproject (sin extras dev)
+# Herramientas de resolución/packaging
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --upgrade pip pip-tools build wheel
 
-# Extrae deps de pyproject -> requirements.in
+# === FIX tomllib ===
+# Genera requirements.in a partir de [project.dependencies] del pyproject
 RUN python - <<'PY'
 import tomllib, pathlib
-data = tomllib.loads(pathlib.Path("pyproject.toml").read_bytes())
-reqs = data["project"]["dependencies"]
-pathlib.Path("requirements.in").write_text("\n".join(reqs) + "\n")
+text = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
+data = tomllib.loads(text)
+reqs = data.get("project", {}).get("dependencies", [])
+pathlib.Path("requirements.in").write_text("\n".join(reqs) + "\n", encoding="utf-8")
 PY
 
-# Resuelve versiones y construye wheelhouse de TODAS las deps
+# Resuelve versiones y construye wheelhouse (ultra rápido en builds posteriores)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip-compile requirements.in -o requirements.txt --resolver=backtracking --quiet && \
-    pip wheel -r requirements.txt -w /wheels
+    pip wheel --prefer-binary -r requirements.txt -w /wheels
 
 ############################################
-# 2) Stage: app (empaqueta la app sin arrastrar toolchain)
+# 2) Stage: runtime (ligero, sin toolchain)
 ############################################
 FROM python:3.11-slim AS runtime
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -47,25 +49,24 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Solo libs de runtime (sin compilar). Añade las que tu app necesite en ejecución.
-# Si usas asyncpg en runtime, añade libpq5; si usas tree-sitter, no suele requerir nada extra.
+# Librerías de runtime necesarias (libpq5 para asyncpg)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
       libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala deps desde wheelhouse (ultra-rápido y reproducible)
+# Instala deps desde wheelhouse (sin red/compilación)
 COPY --from=deps /wheels /wheels
 COPY --from=deps /app/requirements.txt /app/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-index --find-links=/wheels -r requirements.txt && \
     rm -rf /wheels
 
-# Ahora sí: copia el código (cambiar código NO fuerza reinstalar deps)
+# Copia del código (no invalida capa de deps)
 COPY src/ ./src/
 
-# Instala tu paquete SIN volver a resolver deps
+# Instala el paquete sin resolver deps de nuevo
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-deps --no-build-isolation .
 
