@@ -110,6 +110,8 @@ def request_context(request_id=None, **kwargs):
     Yields:
         ID de request
     """
+    global _request_context
+    
     if request_id is None:
         request_id = str(uuid.uuid4())
     
@@ -119,7 +121,6 @@ def request_context(request_id=None, **kwargs):
     try:
         yield request_id
     finally:
-        global _request_context
         _request_context = old_context
 
 # Middleware para FastAPI si está disponible
