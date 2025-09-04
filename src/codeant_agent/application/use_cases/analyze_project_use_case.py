@@ -210,7 +210,12 @@ class AnalyzeProjectUseCase:
             if request.include_metrics:
                 tasks.append(self._analyze_quality_metrics(project_path, results))
             
-            if request.include_dead_code and self.dead_code_engine:
+            # Verificar configuración para análisis de código muerto
+            logger.info(f"Configuración de análisis de código muerto: include_dead_code={request.include_dead_code}, dead_code_engine_disponible={self.dead_code_engine is not None}")
+            
+            # Siempre incluir análisis de código muerto si está habilitado, incluso si no hay motor específico
+            if request.include_dead_code:
+                logger.info("Añadiendo tarea de análisis de código muerto")
                 tasks.append(self._analyze_dead_code(project, project_path, results))
             
             if request.include_security and self.security_analyzer:
@@ -550,7 +555,8 @@ class AnalyzeProjectUseCase:
     async def _analyze_dead_code(self, project: Project, project_path: str, results: AnalysisResults):
         """Analizar código muerto usando el caso de uso real."""
         try:
-            logger.info("Ejecutando análisis de código muerto real...")
+            logger.info("==== INICIO: _analyze_dead_code ====")
+            logger.info(f"Ejecutando análisis de código muerto real para proyecto: {project.name}, path: {project_path}")
             
             # Importar el caso de uso específico para análisis de código muerto
             from .dead_code.analyze_project_dead_code_use_case import (
@@ -564,16 +570,29 @@ class AnalyzeProjectUseCase:
             # Verificar que tenemos el motor de análisis de código muerto
             if not self.dead_code_engine:
                 logger.warning("No se proporcionó el motor de análisis de código muerto. Usando implementación por defecto.")
-                # Crear una implementación por defecto si no existe
-                from ...infrastructure.dead_code.dead_code_repository_impl import DeadCodeRepositoryImpl
-                from ...infrastructure.parsers.parser_repository_impl import ParserRepositoryImpl
                 
-                dead_code_repository = DeadCodeRepositoryImpl()
-                parser_repository = ParserRepositoryImpl()
+                # Crear una implementación por defecto si no existe
+                try:
+                    logger.info("Creando implementación por defecto para análisis de código muerto")
+                    from ...infrastructure.dead_code.dead_code_repository_impl import DeadCodeRepositoryImpl
+                    from ...infrastructure.parsers.parser_repository_impl import ParserRepositoryImpl
+                    
+                    dead_code_repository = DeadCodeRepositoryImpl()
+                    parser_repository = ParserRepositoryImpl()
+                    logger.info("Implementación por defecto creada exitosamente")
+                except Exception as e:
+                    logger.error(f"ERROR creando implementación por defecto: {str(e)}")
+                    raise
             else:
                 # Usar el motor proporcionado
-                dead_code_repository = self.dead_code_engine.get_repository()
-                parser_repository = self.dead_code_engine.get_parser_repository()
+                logger.info("Usando motor de código muerto proporcionado")
+                try:
+                    dead_code_repository = self.dead_code_engine.get_repository()
+                    parser_repository = self.dead_code_engine.get_parser_repository()
+                    logger.info("Repositorios obtenidos del motor exitosamente")
+                except Exception as e:
+                    logger.error(f"ERROR obteniendo repositorios del motor: {str(e)}")
+                    raise
             
             # Crear el servicio de clasificación
             classification_service = DeadCodeClassificationService()
@@ -601,10 +620,16 @@ class AnalyzeProjectUseCase:
             start_time = time.time()
             
             # Llamar al caso de uso real
-            dead_code_result = await dead_code_use_case.execute(dead_code_request)
-            
-            elapsed_time = time.time() - start_time
-            logger.info(f"Análisis de código muerto completado en {elapsed_time:.2f} segundos")
+            logger.info(f"Ejecutando caso de uso AnalyzeProjectDeadCodeUseCase para {project_path_obj}")
+            try:
+                dead_code_result = await dead_code_use_case.execute(dead_code_request)
+                
+                elapsed_time = time.time() - start_time
+                logger.info(f"Análisis de código muerto completado en {elapsed_time:.2f} segundos")
+            except Exception as e:
+                logger.error(f"ERROR CRÍTICO ejecutando AnalyzeProjectDeadCodeUseCase: {str(e)}")
+                logger.exception("Stack trace completo:")
+                raise
             
             if not dead_code_result.success:
                 logger.error(f"Error en análisis de código muerto: {dead_code_result.error}")
@@ -672,11 +697,14 @@ class AnalyzeProjectUseCase:
             results.total_violations += total_dead_code
             
             logger.info(f"Análisis de código muerto completo: {total_dead_code} problemas encontrados")
+            logger.info("==== FIN: _analyze_dead_code completado exitosamente ====")
             
         except Exception as e:
             logger.error(f"Error en análisis de código muerto: {str(e)}")
             logger.exception("Detalles del error:")
             results.errors.append(f"Error en análisis de código muerto: {str(e)}")
+            logger.info("==== FIN: _analyze_dead_code con ERROR ====")
+            raise
     
     async def _analyze_security(self, project_path: str, results: AnalysisResults):
         """Analizar seguridad básica del código."""
