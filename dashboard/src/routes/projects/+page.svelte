@@ -3,7 +3,8 @@
     import { onMount } from "svelte";
 
     // Datos de la página
-    export let data;
+    // Convertimos a const ya que no lo usamos directamente como let
+    export const data = {};
 
     let projects = [];
     let loading = true;
@@ -161,6 +162,10 @@
                 <div
                     class="project-card"
                     on:click={() => openProjectDetails(project.id)}
+                    on:keydown={(e) => e.key === 'Enter' && openProjectDetails(project.id)}
+                    tabindex="0"
+                    role="button"
+                    aria-label="Ver detalles de {project.name}"
                 >
                     <h2>{project.name}</h2>
                     <p>{project.description || "Sin descripción"}</p>
