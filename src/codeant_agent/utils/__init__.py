@@ -1,10 +1,37 @@
 """
-Utilidades varias para la aplicación.
+Utilidades para CodeAnt Agent.
 """
 
-# Importar clases de error para disponibilidad global
+from .result import Result, Success, Failure
 from .error import (
-    BaseError, ValidationError, AuthenticationError, 
-    AuthorizationError, NotFoundError, ConflictError,
-    ExternalServiceError, Result
+    BaseError,
+    ValidationError,
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    ConflictError,
+    InfrastructureError,
+    RepositoryError,
+    ExternalServiceError,
+    ParsingError,
+    AnalysisError,
+    InternalError
 )
+
+__all__ = [
+    "Result",
+    "Success", 
+    "Failure",
+    "BaseError",
+    "ValidationError",
+    "AuthenticationError",
+    "AuthorizationError",
+    "NotFoundError",
+    "ConflictError",
+    "InfrastructureError",
+    "RepositoryError",
+    "ExternalServiceError",
+    "ParsingError",
+    "AnalysisError",
+    "InternalError"
+]
