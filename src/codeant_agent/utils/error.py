@@ -14,6 +14,26 @@ class ValidationError(BaseError):
     """Error de validación."""
     pass
 
+class AuthenticationError(BaseError):
+    """Error de autenticación."""
+    pass
+
+class AuthorizationError(BaseError):
+    """Error de autorización."""
+    pass
+
+class NotFoundError(BaseError):
+    """Error cuando un recurso no se encuentra."""
+    pass
+
+class ConflictError(BaseError):
+    """Error cuando hay un conflicto (p.ej., recurso ya existe)."""
+    pass
+
+class ExternalServiceError(BaseError):
+    """Error al comunicarse con un servicio externo."""
+    pass
+
 class Result(Generic[T, E]):
     """
     Clase de resultado que puede contener un valor exitoso o un error.
