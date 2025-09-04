@@ -552,44 +552,130 @@ class AnalyzeProjectUseCase:
         try:
             logger.info("Ejecutando análisis de código muerto real...")
             
-            # Crear el caso de uso de análisis de código muerto
-            # Por ahora, vamos a crear una versión simplificada
-            # TODO: Inyectar las dependencias correctas
+            # Importar el caso de uso específico para análisis de código muerto
+            from .dead_code.analyze_project_dead_code_use_case import (
+                AnalyzeProjectDeadCodeUseCase, 
+                AnalyzeProjectDeadCodeRequest
+            )
+            from ...domain.repositories.dead_code_repository import DeadCodeRepository
+            from ...domain.repositories.parser_repository import ParserRepository
+            from ...domain.services.dead_code_service import DeadCodeClassificationService
             
-            # Analizar archivos Python, TypeScript y Rust
+            # Verificar que tenemos el motor de análisis de código muerto
+            if not self.dead_code_engine:
+                logger.warning("No se proporcionó el motor de análisis de código muerto. Usando implementación por defecto.")
+                # Crear una implementación por defecto si no existe
+                from ...infrastructure.dead_code.dead_code_repository_impl import DeadCodeRepositoryImpl
+                from ...infrastructure.parsers.parser_repository_impl import ParserRepositoryImpl
+                
+                dead_code_repository = DeadCodeRepositoryImpl()
+                parser_repository = ParserRepositoryImpl()
+            else:
+                # Usar el motor proporcionado
+                dead_code_repository = self.dead_code_engine.get_repository()
+                parser_repository = self.dead_code_engine.get_parser_repository()
+            
+            # Crear el servicio de clasificación
+            classification_service = DeadCodeClassificationService()
+            
+            # Crear el caso de uso para análisis de código muerto
+            dead_code_use_case = AnalyzeProjectDeadCodeUseCase(
+                dead_code_repository=dead_code_repository,
+                parser_repository=parser_repository,
+                classification_service=classification_service
+            )
+            
+            # Crear la request para el análisis
+            project_path_obj = Path(project_path)
+            dead_code_request = AnalyzeProjectDeadCodeRequest(
+                project_path=project_path_obj,
+                include_cross_module_analysis=True,
+                include_suggestions=True,
+                include_classification=True,
+                confidence_threshold=0.5,
+                parallel_analysis=True
+            )
+            
+            # Ejecutar el análisis real de código muerto
+            logger.info(f"Iniciando análisis de código muerto para proyecto en {project_path}")
+            start_time = time.time()
+            
+            # Llamar al caso de uso real
+            dead_code_result = await dead_code_use_case.execute(dead_code_request)
+            
+            elapsed_time = time.time() - start_time
+            logger.info(f"Análisis de código muerto completado en {elapsed_time:.2f} segundos")
+            
+            if not dead_code_result.success:
+                logger.error(f"Error en análisis de código muerto: {dead_code_result.error}")
+                results.errors.append(f"Error en análisis de código muerto: {dead_code_result.error}")
+                return
+            
+            # Obtener los resultados del análisis
+            dead_code_response = dead_code_result.data
+            project_analysis = dead_code_response.project_analysis
+            
+            # Convertir los resultados al formato esperado
+            stats = project_analysis.global_statistics
             dead_code_stats = {
-                "unused_functions": 0,
-                "unused_variables": 0,
-                "unused_imports": 0,
-                "unreachable_code": 0,
-                "total_dead_code_lines": 0
+                "unused_functions": stats.total_unused_functions,
+                "unused_variables": stats.total_unused_variables,
+                "unused_imports": stats.total_unused_imports,
+                "unreachable_code": stats.total_unreachable_code_blocks,
+                "dead_branches": stats.total_dead_branches,
+                "unused_parameters": stats.total_unused_parameters,
+                "redundant_assignments": stats.total_redundant_assignments,
+                "total_dead_code_lines": stats.get_total_lines(),
+                "execution_time_ms": project_analysis.execution_time_ms,
+                "files_analyzed": len(project_analysis.file_analyses)
             }
             
-            # Por ahora usamos una implementación básica
-            # En el futuro, esto debería usar AnalyzeProjectDeadCodeUseCase
-            import os
-            for root, dirs, files in os.walk(project_path):
-                for file in files:
-                    if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.rs')):
-                        # Incrementar contadores básicos
-                        dead_code_stats["unused_variables"] += 2
-                        dead_code_stats["unused_imports"] += 1
-                        dead_code_stats["total_dead_code_lines"] += 10
+            # Añadir información detallada si está disponible
+            if dead_code_response.classified_issues:
+                dead_code_stats["classified_issues"] = dead_code_response.classified_issues
             
+            if dead_code_response.suggestions:
+                dead_code_stats["suggestions"] = dead_code_response.suggestions
+            
+            if dead_code_response.analysis_summary:
+                dead_code_stats["analysis_summary"] = dead_code_response.analysis_summary
+            
+            # Añadir información de los archivos con más problemas
+            worst_files = []
+            for file_analysis in sorted(
+                project_analysis.file_analyses,
+                key=lambda x: x.statistics.get_total_issues(),
+                reverse=True
+            )[:5]:  # Obtener los 5 peores archivos
+                worst_files.append({
+                    "file_path": str(file_analysis.file_path),
+                    "issues_count": file_analysis.statistics.get_total_issues(),
+                    "language": str(file_analysis.language)
+                })
+            
+            if worst_files:
+                dead_code_stats["worst_files"] = worst_files
+            
+            # Actualizar los resultados
             results.dead_code_results = dead_code_stats
             
             # Actualizar violaciones
             total_dead_code = (
-                dead_code_stats["unused_functions"] +
-                dead_code_stats["unused_variables"] +
-                dead_code_stats["unused_imports"] +
-                dead_code_stats["unreachable_code"]
+                stats.total_unused_functions +
+                stats.total_unused_variables +
+                stats.total_unused_imports +
+                stats.total_unreachable_code_blocks +
+                stats.total_dead_branches
             )
+            
             results.medium_violations += total_dead_code
             results.total_violations += total_dead_code
             
+            logger.info(f"Análisis de código muerto completo: {total_dead_code} problemas encontrados")
+            
         except Exception as e:
             logger.error(f"Error en análisis de código muerto: {str(e)}")
+            logger.exception("Detalles del error:")
             results.errors.append(f"Error en análisis de código muerto: {str(e)}")
     
     async def _analyze_security(self, project_path: str, results: AnalysisResults):
