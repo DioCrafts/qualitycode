@@ -228,7 +228,7 @@
                     </span>
                     <span class="legend-item">
                         <div class="legend-dot low"></div>
-                        < 50% (Poor)
+                        &lt; 50% (Poor)
                     </span>
                 </div>
             </div>

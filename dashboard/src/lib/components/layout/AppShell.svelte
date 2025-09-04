@@ -54,6 +54,10 @@
             <div
                 class="mobile-overlay"
                 on:click={() => (mobileSidebarOpen = false)}
+                on:keydown={(e) => e.key === 'Escape' && (mobileSidebarOpen = false)}
+                role="button"
+                tabindex="0"
+                aria-label="Cerrar menú lateral"
                 transition:fade={{ duration: 200 }}
             ></div>
             <aside
