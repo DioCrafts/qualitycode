@@ -13,7 +13,17 @@ from collections import defaultdict, deque
 import logging
 
 from ...domain.repositories.dead_code_repository import DeadCodeRepository
-from ..ast import TreeSitterAnalyzer
+
+# Configurar logger antes de usarlo
+logger = logging.getLogger(__name__)
+
+try:
+    from ..ast import TreeSitterAnalyzer
+    TREE_SITTER_AVAILABLE = True
+except ImportError:
+    logger.warning("TreeSitter no está disponible. Usando análisis básico de código muerto.")
+    TreeSitterAnalyzer = None
+    TREE_SITTER_AVAILABLE = False
 from ...domain.entities.dead_code_analysis import (
     DeadCodeAnalysis, ProjectDeadCodeAnalysis, DeadCodeStatistics,
     UnusedVariable, UnusedFunction, UnusedClass, UnusedImport,
@@ -31,8 +41,6 @@ from ...domain.entities.dependency_analysis import (
 )
 from ...domain.entities.parse_result import ParseResult
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-
-logger = logging.getLogger(__name__)
 
 
 class DeadCodeRepositoryImpl(DeadCodeRepository):
@@ -296,6 +304,11 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             return unused_variables
             
         try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_variables
+                
             # Usar Tree-sitter para análisis real
             analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
             
@@ -349,6 +362,11 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             return unused_functions
             
         try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_functions
+                
             # Usar Tree-sitter para análisis real
             analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
             
@@ -401,6 +419,11 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             return unused_classes
             
         try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_classes
+                
             # Usar Tree-sitter para análisis real
             analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
             
@@ -437,6 +460,11 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             return unused_imports
             
         try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_imports
+                
             # Usar Tree-sitter para análisis real
             analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
             

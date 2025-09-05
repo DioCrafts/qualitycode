@@ -200,7 +200,13 @@ async def run_analysis(
             include_complexity=True,  # Siempre incluir análisis de complejidad
             include_dead_code=True,
             include_security=True,
-            include_duplicates=True
+            include_duplicates=True,
+            include_bugs=True,
+            include_dependencies=True,
+            include_test_coverage=True,
+            include_performance=True,
+            include_architecture=True,
+            include_documentation=True
         )
         
         # Crear ID único para el análisis
@@ -278,7 +284,13 @@ async def execute_real_analysis(
                         "quality_metrics": analysis_results.quality_metrics,
                         "dead_code_results": analysis_results.dead_code_results,
                         "security_results": analysis_results.security_results,
-                        "duplicate_results": analysis_results.duplicate_results
+                        "duplicate_results": analysis_results.duplicate_results,
+                        "bug_analysis_results": analysis_results.bug_analysis_results,
+                        "dependency_results": analysis_results.dependency_results,
+                        "test_coverage_results": analysis_results.test_coverage_results,
+                        "performance_results": analysis_results.performance_results,
+                        "architecture_results": analysis_results.architecture_results,
+                        "documentation_results": analysis_results.documentation_results
                     }
                 })
                 
