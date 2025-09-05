@@ -802,7 +802,7 @@ class AIDeadCodeAgent:
                 "symbol_id": symbol_id,
                 "name": symbol.name,
                 "file": symbol.file_path,
-                "line": symbol.line,
+                "line": symbol.line_number,
                 "confidence": final_confidence,
                 "impact_score": impact.impact_score if impact else 0,
                 "ai_reasoning": ai_insight.reasoning if ai_insight else "",
