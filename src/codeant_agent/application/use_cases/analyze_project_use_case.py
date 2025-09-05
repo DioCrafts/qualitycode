@@ -589,6 +589,99 @@ class AnalyzeProjectUseCase:
             logger.info("==== INICIO: _analyze_dead_code ====")
             logger.info(f"Ejecutando análisis de código muerto real para proyecto: {project.name}, path: {project_path}")
             
+            # Verificar si debemos usar el motor avanzado inteligente
+            use_advanced_engine = os.environ.get('USE_ADVANCED_DEAD_CODE_ENGINE', 'true').lower() == 'true'
+            
+            if use_advanced_engine:
+                try:
+                    logger.info("🧠 Activando motor INTELIGENTE de análisis de código muerto (99% certeza)")
+                    from ...infrastructure.dead_code.advanced_dead_code_engine import AdvancedDeadCodeEngine
+                    
+                    # Crear instancia del motor avanzado
+                    advanced_engine = AdvancedDeadCodeEngine(project_path)
+                    advanced_results = await advanced_engine.analyze_dead_code()
+                    
+                    # Convertir resultados avanzados al formato del sistema
+                    results.dead_code_results = {
+                        "unused_variables": [],
+                        "unused_functions": [],
+                        "unused_classes": [],
+                        "unused_imports": [],
+                        "unreachable_code": [],
+                        "total_issues": 0,
+                        # Información adicional del motor inteligente
+                        "advanced_analysis": {
+                            "summary": advanced_results.get("summary", {}),
+                            "safe_to_delete": len(advanced_results.get("safe_to_delete", [])),
+                            "requires_review": len(advanced_results.get("requires_review", [])),
+                            "confidence_distribution": advanced_results.get("confidence_distribution", {}),
+                            "recommendations": advanced_results.get("recommendations", [])
+                        }
+                    }
+                    
+                    # Procesar items por tipo y confianza
+                    for item in advanced_results.get("dead_code_items", []):
+                        item_data = {
+                            "name": item.symbol_name,
+                            "file": item.file_path,
+                            "line": item.line_number,
+                            "confidence": f"{item.confidence * 100:.1f}%",
+                            "reason": item.reason,
+                            "safe_to_delete": item.safe_to_delete
+                        }
+                        
+                        # Clasificar por tipo
+                        if item.symbol_type == 'variable':
+                            results.dead_code_results["unused_variables"].append(item_data)
+                        elif item.symbol_type == 'function':
+                            results.dead_code_results["unused_functions"].append(item_data)
+                        elif item.symbol_type == 'class':
+                            results.dead_code_results["unused_classes"].append(item_data)
+                        elif item.symbol_type == 'import':
+                            results.dead_code_results["unused_imports"].append(item_data)
+                        
+                        # Alta confianza = código inalcanzable
+                        if item.confidence > 0.95:
+                            results.dead_code_results["unreachable_code"].append(item_data)
+                    
+                    # Actualizar totales
+                    total_items = len(advanced_results.get("dead_code_items", []))
+                    results.dead_code_results["total_issues"] = total_items
+                    
+                    # Actualizar violaciones según confianza
+                    for item in advanced_results.get("dead_code_items", []):
+                        if item.confidence > 0.95:
+                            results.critical_violations += 1
+                        elif item.confidence > 0.85:
+                            results.high_violations += 1
+                        elif item.confidence > 0.70:
+                            results.medium_violations += 1
+                        else:
+                            results.low_violations += 1
+                        results.total_violations += 1
+                    
+                    logger.info(f"✅ Análisis inteligente completado: {total_items} items encontrados")
+                    logger.info(f"🎯 Items con 95%+ certeza (seguros para eliminar): {results.dead_code_results['advanced_analysis']['safe_to_delete']}")
+                    logger.info(f"⚠️ Items que requieren revisión: {results.dead_code_results['advanced_analysis']['requires_review']}")
+                    
+                    # Mostrar recomendaciones principales
+                    recommendations = advanced_results.get("recommendations", [])
+                    if recommendations:
+                        logger.info("📋 Recomendaciones principales:")
+                        for rec in recommendations[:2]:
+                            logger.info(f"  - {rec.get('action', '')}: {rec.get('description', '')}")
+                    
+                    logger.info("==== FIN: _analyze_dead_code (Motor Inteligente) ====")
+                    return
+                    
+                except ImportError:
+                    logger.warning("❌ Motor inteligente no disponible (falta networkx?), usando motor estándar")
+                except Exception as e:
+                    logger.error(f"❌ Error en motor inteligente: {e}, fallback a motor estándar")
+            
+            # Si no usamos motor avanzado o falló, usar el motor estándar
+            logger.info("Usando motor estándar de análisis de código muerto")
+            
             # Importar el caso de uso específico para análisis de código muerto
             from .dead_code.analyze_project_dead_code_use_case import (
                 AnalyzeProjectDeadCodeUseCase, 
