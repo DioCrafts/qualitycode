@@ -598,7 +598,10 @@ class AIDeadCodeAgent:
         """Verificar si es un endpoint de API."""
         api_decorators = ['@route', '@app.', '@router.', '@api.', '@get', '@post']
         
-        return any(dec in str(symbol.attributes) for dec in api_decorators)
+        # Usar decorators en lugar de attributes
+        if hasattr(symbol, 'decorators'):
+            return any(any(api_dec in dec for api_dec in api_decorators) for dec in symbol.decorators)
+        return False
     
     async def _analyze_type_impact(self, symbol_id: str) -> List[str]:
         """Analizar impacto en el sistema de tipos."""
@@ -687,7 +690,7 @@ class AIDeadCodeAgent:
                 is_dead, confidence, reasoning = self._analyze_symbol_heuristically(
                     {
                         "name": symbol.name,
-                        "line": symbol.line,
+                        "line": symbol.line_number,
                         "current_confidence": symbol.confidence_score
                     },
                     source_code,
