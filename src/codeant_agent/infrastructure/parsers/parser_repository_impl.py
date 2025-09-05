@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from ...domain.repositories.parser_repository import ParserRepository
 from ...domain.value_objects.programming_language import ProgrammingLanguage
 from ...domain.entities.parse_result import ParseResult, ParseRequest
-from ...utils.error import ParseError
+from ...utils.error import ParsingError
 
 @dataclass 
 class FunctionInfo:
@@ -94,7 +94,11 @@ class ParserRepositoryImpl(ParserRepository):
         except Exception as e:
             self._stats['parse_errors'] += 1
             logger.error(f"Error parseando {file_path}: {e}")
-            raise ParseError(f"Error parseando archivo: {str(e)}")
+            raise ParsingError(
+                message=f"Error parseando archivo: {str(e)}",
+                language=str(language),
+                file_path=str(file_path)
+            )
     
     async def parse_content(self, content: str, language: ProgrammingLanguage) -> ParseResult:
         """
