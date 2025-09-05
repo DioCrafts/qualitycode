@@ -362,7 +362,18 @@ class AnalyzeProjectUseCase:
                                     results.total_lines += js_result.metrics.lines_of_code
                                     
                                     # Añadir métricas de complejidad
-                                    if js_result.metrics.cyclomatic_complexity > 10:
+                                    # Procesar funciones individuales si están disponibles
+                                    if js_result.functions:
+                                        for func in js_result.functions:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                                complex_functions.append({
+                                                    "file": str(file_path),
+                                                    "name": func.name,
+                                                    "line": func.start_line if hasattr(func, 'start_line') else 1,
+                                                    "complexity": func.metrics.cyclomatic_complexity
+                                                })
+                                    elif js_result.metrics.cyclomatic_complexity > 10:
+                                        # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),
                                             "complexity": js_result.metrics.cyclomatic_complexity
@@ -395,7 +406,18 @@ class AnalyzeProjectUseCase:
                                     results.total_lines += py_result.metrics.lines_of_code
                                     
                                     # Métricas de complejidad Python
-                                    if py_result.metrics.cyclomatic_complexity > 10:
+                                    # Procesar funciones individuales si están disponibles
+                                    if py_result.functions:
+                                        for func in py_result.functions:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                                complex_functions.append({
+                                                    "file": str(file_path),
+                                                    "name": func.name,
+                                                    "line": func.start_line if hasattr(func, 'start_line') else 1,
+                                                    "complexity": func.metrics.cyclomatic_complexity
+                                                })
+                                    elif py_result.metrics.cyclomatic_complexity > 10:
+                                        # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),
                                             "complexity": py_result.metrics.cyclomatic_complexity
@@ -431,7 +453,18 @@ class AnalyzeProjectUseCase:
                                     results.total_lines += rs_result.metrics.lines_of_code
                                     
                                     # Métricas específicas de Rust
-                                    if rs_result.metrics.cyclomatic_complexity > 10:
+                                    # Procesar funciones individuales si están disponibles
+                                    if rs_result.functions:
+                                        for func in rs_result.functions:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                                complex_functions.append({
+                                                    "file": str(file_path),
+                                                    "name": func.name,
+                                                    "line": func.start_line if hasattr(func, 'start_line') else 1,
+                                                    "complexity": func.metrics.cyclomatic_complexity
+                                                })
+                                    elif rs_result.metrics.cyclomatic_complexity > 10:
+                                        # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),
                                             "complexity": rs_result.metrics.cyclomatic_complexity
@@ -535,40 +568,63 @@ class AnalyzeProjectUseCase:
                     file_ext = os.path.splitext(func['file'])[1]
                     function_metrics = await self._extract_function_metrics(func['file'], lines, file_ext)
                     
-                    # Buscar la función específica
+                    # Buscar la función específica por nombre o por complejidad similar
+                    best_match = None
                     for fm in function_metrics:
-                        if fm.get('complexity', 0) == func['complexity']:
-                            detailed_func = {
-                                'name': fm.get('name', 'unknown'),
-                                'file': func['file'],
-                                'line': fm.get('line', 1),
-                                'end_line': fm.get('end_line', fm.get('line', 1) + 10),
-                                'complexity': func['complexity'],
-                                'cognitive_complexity': fm.get('cognitive_complexity'),
-                                'branches': fm.get('branches', 0),
-                                'loops': fm.get('loops', 0),
-                                'conditions': fm.get('conditions', 0),
-                                'max_nesting': fm.get('max_nesting', 0),
-                                'switches': fm.get('switches', 0),
-                                'language': file_ext[1:] if file_ext else 'unknown',
-                                'code_preview': fm.get('code_preview', ''),
-                                'complexity_reasons': fm.get('complexity_reasons', [])
-                            }
-                            detailed_complex_functions.append(detailed_func)
+                        # Primero intentar por nombre si está disponible
+                        if 'name' in func and fm.get('name') == func.get('name'):
+                            best_match = fm
                             break
-                    else:
-                        # Si no encontramos métricas detalladas, usar información básica
-                        detailed_complex_functions.append({
-                            'name': f'function_{len(detailed_complex_functions) + 1}',
+                        # Si no, buscar por complejidad similar (con tolerancia)
+                        elif abs(fm.get('complexity', 0) - func['complexity']) <= 2:
+                            if not best_match or abs(fm.get('complexity', 0) - func['complexity']) < abs(best_match.get('complexity', 0) - func['complexity']):
+                                best_match = fm
+                    
+                    if best_match:
+                        detailed_func = {
+                            'name': best_match.get('name', func.get('name', 'unknown')),
                             'file': func['file'],
-                            'line': 1,
+                            'line': best_match.get('line', func.get('line', 1)),
+                            'end_line': best_match.get('end_line', best_match.get('line', 1) + 10),
                             'complexity': func['complexity'],
-                            'language': file_ext[1:] if file_ext else 'unknown'
+                            'cognitive_complexity': best_match.get('cognitive_complexity', func['complexity'] * 1.2),
+                            'branches': best_match.get('branches', 0),
+                            'loops': best_match.get('loops', 0),
+                            'conditions': best_match.get('conditions', 0),
+                            'max_nesting': best_match.get('max_nesting', 0),
+                            'switches': best_match.get('switches', 0),
+                            'language': file_ext[1:] if file_ext else 'python',
+                            'code_preview': best_match.get('code_preview', ''),
+                            'complexity_reasons': best_match.get('complexity_reasons', [])
+                        }
+                        detailed_complex_functions.append(detailed_func)
+                    else:
+                        # Si no encontramos métricas detalladas, usar información básica pero con el nombre real
+                        detailed_complex_functions.append({
+                            'name': func.get('name', f'function_{len(detailed_complex_functions) + 1}'),
+                            'file': func['file'],
+                            'line': func.get('line', 1),
+                            'complexity': func['complexity'],
+                            'cognitive_complexity': func['complexity'] * 1.2,
+                            'language': file_ext[1:] if file_ext else 'python',
+                            'branches': 0,
+                            'loops': 0,
+                            'conditions': 0,
+                            'max_nesting': 0,
+                            'code_preview': '',
+                            'complexity_reasons': ['Análisis detallado no disponible']
                         })
                         
                 except Exception as e:
                     logger.error(f"Error procesando función compleja en {func['file']}: {e}")
-                    detailed_complex_functions.append(func)
+                    # Incluir información básica aunque haya error
+                    detailed_complex_functions.append({
+                        'name': func.get('name', 'unknown'),
+                        'file': func['file'],
+                        'line': func.get('line', 1),
+                        'complexity': func['complexity'],
+                        'language': file_ext[1:] if file_ext else 'python'
+                    })
             
             # Generar métricas mejoradas con función metrics detalladas
             results.complexity_metrics = {
