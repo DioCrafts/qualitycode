@@ -331,7 +331,7 @@ class AdvancedDeadCodeEngine:
             # Si es un punto de inyección
             for injection_type, points in injection_points.items():
                 if symbol_id in points:
-                                                symbol.confidence_score = 0.0  # Definitivamente NO es código muerto
+                    symbol.confidence_score = 0.0  # Definitivamente NO es código muerto
                     symbol.usage_contexts.add(f'injection_{injection_type}')
                     symbol.is_entry_point = True
     
