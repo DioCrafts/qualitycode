@@ -17,9 +17,11 @@ from ...domain.entities.dead_code_analysis import (
     DeadCodeAnalysis, ProjectDeadCodeAnalysis, DeadCodeStatistics,
     UnusedVariable, UnusedFunction, UnusedClass, UnusedImport,
     UnreachableCode, DeadBranch, UnusedParameter, RedundantAssignment,
-    EntryPoint, EntryPointType, UnusedReason, ElementType,
-    UnreachabilityReason, ConditionType, AssignmentType, RedundancyType
+    EntryPoint, EntryPointType, UnusedReason,
+    UnreachabilityReason, AssignmentType, RedundancyType
 )
+from ...domain.entities.natural_rules.natural_rule import ElementType
+from ...domain.entities.natural_rules.rule_intent import ConditionType
 from ...domain.entities.dependency_analysis import (
     ControlFlowGraph, DependencyGraph, GlobalDependencyGraph,
     SymbolId, ModuleId, UsageAnalysis, DependencyType, SymbolType
