@@ -590,22 +590,18 @@ class AdvancedDeadCodeEngine:
         # Procesar resultados con máxima confianza
         for item in definitely_dead:
             result = DeadCodeResult(
-                symbol_id=item["symbol_id"],
-                symbol_name=item["name"],
-                symbol_type="unknown",  # Se puede mejorar
-                file_path=item["file"],
-                line_number=item["line"],
-                confidence_score=item["confidence"],
-                reasons=[
-                    item["ai_reasoning"],
-                    f"Impacto si se elimina: {item['impact_score']:.2f}",
-                    item["recommendation"]
-                ],
-                usage_contexts=item.get("alternative_uses", []),
-                is_test_code=False,
-                is_entry_point=False,
-                framework_specific=any("framework" in use.lower() for use in item.get("alternative_uses", [])),
-                last_modified=None
+                file_path=item.get("file", ""),
+                symbol_name=item.get("name", ""),
+                symbol_type=item.get("type", "unknown"),
+                line_number=item.get("line", 0),
+                confidence=item.get("confidence", 0.99),
+                severity="critical",
+                reason=item.get("ai_reasoning", "Detectado por IA con alta confianza"),
+                suggested_action=item.get("recommendation", "Eliminar con seguridad"),
+                safe_to_delete=True,
+                dependencies=[],
+                used_in_tests=False,
+                potentially_dynamic=False
             )
             self.results.append(result)
             consolidated.append(result)
@@ -615,22 +611,18 @@ class AdvancedDeadCodeEngine:
                                ("possibly_dead", possibly_dead)]:
             for item in items:
                 result = DeadCodeResult(
-                    symbol_id=item["symbol_id"],
-                    symbol_name=item["name"],
-                    symbol_type="unknown",
-                    file_path=item["file"],
-                    line_number=item["line"],
-                    confidence_score=item["confidence"],
-                    reasons=[
-                        item["ai_reasoning"],
-                        f"Categoría: {category}",
-                        item["recommendation"]
-                    ],
-                    usage_contexts=item.get("alternative_uses", []),
-                    is_test_code=False,
-                    is_entry_point=False,
-                    framework_specific=any("framework" in use.lower() for use in item.get("alternative_uses", [])),
-                    last_modified=None
+                    file_path=item.get("file", ""),
+                    symbol_name=item.get("name", ""),
+                    symbol_type=item.get("type", "unknown"),
+                    line_number=item.get("line", 0),
+                    confidence=item.get("confidence", 0.85 if category == "very_likely_dead" else 0.70),
+                    severity="high" if category == "very_likely_dead" else "medium",
+                    reason=item.get("ai_reasoning", f"Detectado como {category}"),
+                    suggested_action=item.get("recommendation", "Revisar antes de eliminar"),
+                    safe_to_delete=category == "very_likely_dead",
+                    dependencies=[],
+                    used_in_tests=False,
+                    potentially_dynamic=category == "possibly_dead"
                 )
                 self.results.append(result)
                 consolidated.append(result)
