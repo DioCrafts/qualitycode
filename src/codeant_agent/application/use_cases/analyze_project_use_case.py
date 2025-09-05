@@ -7,6 +7,7 @@ from datetime import datetime
 import time
 import asyncio
 import os
+import ast
 from pathlib import Path
 
 from ...domain.entities.project import Project
