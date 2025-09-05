@@ -68,6 +68,8 @@
             // Unificar estructura: algunos campos vienen en result
             analysis = data?.result ? { ...data, ...data.result } : data;
             console.log("Analysis data:", analysis);
+            console.log("Dead code results:", analysis?.dead_code_results);
+            console.log("Complexity metrics:", analysis?.complexity_metrics);
         } catch (e: any) {
             error = e?.message ?? "Error desconocido";
         } finally {
@@ -769,7 +771,7 @@
                                 <div class="language-distribution">
                                     <h4>Distribución por Lenguaje</h4>
                                     <div class="language-bars">
-                                        {#each Object.entries(x.files_per_language ?? {}) as [lang, count]}
+                                        {#each Object.entries(x.files_per_language ?? {}) as [lang, count] (lang)}
                                             <div class="language-bar">
                                                 <span class="lang-name"
                                                     >{lang}</span
@@ -777,7 +779,9 @@
                                                 <div class="bar-container">
                                                     <div
                                                         class="bar"
-                                                        style="width: {(count /
+                                                        style="width: {(Number(
+                                                            count,
+                                                        ) /
                                                             analysis.files_analyzed) *
                                                             100}%"
                                                     ></div>
