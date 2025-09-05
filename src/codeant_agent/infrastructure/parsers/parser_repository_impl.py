@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from ...domain.repositories.parser_repository import ParserRepository
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-from ...domain.entities.parse_result import ParseResult, ParseRequest
+from ...domain.entities.parse_result import ParseResult, ParseRequest, ParseStatus, ParseMetadata
 from ...utils.error import ParsingError
 
 @dataclass 
@@ -106,18 +106,36 @@ class ParserRepositoryImpl(ParserRepository):
         """
         logger.debug(f"Parseando contenido para lenguaje {language}")
         
-        # Crear resultado básico
-        result = ParseResult(
-            file_path=Path("memory://content"),
-            language=language,
-            content=content,
-            tree=None,  # En una implementación real, aquí iría el AST de Tree-sitter
-            syntax_errors=[],
-            parse_time_ms=0
+        # Análisis básico del contenido
+        lines = content.split('\n')
+        
+        # Crear metadatos
+        metadata = ParseMetadata(
+            file_size_bytes=len(content.encode('utf-8')),
+            line_count=len(lines),
+            character_count=len(content),
+            encoding="UTF-8",
+            has_syntax_errors=False,
+            complexity_estimate=0.0,
+            parse_duration_ms=0,
+            node_count=100,  # Valor simulado
+            error_count=0,
+            warning_count=0,
+            cache_hit=False,
+            incremental_parse=False
         )
         
-        # Análisis básico del contenido según el lenguaje
-        lines = content.split('\n')
+        # Crear resultado básico
+        result = ParseResult(
+            tree={"type": "module", "children": []},  # AST simulado
+            language=language,
+            status=ParseStatus.SUCCESS,
+            metadata=metadata,
+            file_path=None,
+            warnings=[],
+            errors=[]
+        )
+        
         
         # Detectar funciones (implementación muy básica)
         result.functions = self._detect_functions(lines, language)
