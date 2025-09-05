@@ -273,6 +273,78 @@ def combine_confidence(base, interprocedural, ml, ai):
                for key, score in locals().items())
 ```
 
+## 🤖 Opciones de LLM para el Agente IA
+
+### Proveedores Soportados
+
+| Provider | Configuración | Precisión | Costo | Privacidad |
+|----------|--------------|-----------|-------|------------|
+| **Heurísticas Locales** | `AI_PROVIDER=local` | 99.5% | Gratis | 100% Local |
+| **OpenAI GPT-4** | `AI_PROVIDER=openai` | 99.99% | ~$0.01/análisis | Envía a OpenAI |
+| **Anthropic Claude** | `AI_PROVIDER=anthropic` | 99.98% | ~$0.008/análisis | Envía a Anthropic |
+| **Modelos Locales** | `AI_PROVIDER=local_llm` | 99.7% | Gratis | 100% Local |
+
+### Configuración por Provider
+
+#### 1. **Heurísticas Locales (Por Defecto)**
+```bash
+# No requiere configuración adicional
+export AI_PROVIDER=local  # o simplemente omitir
+```
+- Usa análisis heurístico avanzado
+- Detecta patrones comunes sin LLM
+- Ideal para la mayoría de proyectos
+
+#### 2. **OpenAI GPT-4**
+```bash
+export AI_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+# Opcional: Modelo específico
+export OPENAI_MODEL=gpt-4-turbo-preview  # o gpt-3.5-turbo
+```
+- Máxima precisión
+- Comprensión profunda del contexto
+- Requiere cuenta de OpenAI
+
+#### 3. **Anthropic Claude**
+```bash
+export AI_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+# Opcional: Modelo específico
+export ANTHROPIC_MODEL=claude-3-opus  # o claude-3-sonnet
+```
+- Excelente para análisis de código
+- Buena relación precio/rendimiento
+- Requiere cuenta de Anthropic
+
+#### 4. **Modelos Locales (Ollama/LlamaCpp)**
+```bash
+export AI_PROVIDER=local_llm
+# Opción A: Usar Ollama
+export OLLAMA_MODEL=codellama:7b
+
+# Opción B: Usar modelo descargado
+export LOCAL_MODEL_PATH=/models/codellama-7b-instruct.gguf
+export LOCAL_MODEL_TYPE=llama  # o mistral, mixtral
+```
+- 100% privado y local
+- Requiere GPU (recomendado) o CPU potente
+- Modelos recomendados: CodeLlama, DeepSeek-Coder, Mistral
+
+### Instalación para Modelos Locales
+
+```bash
+# Para Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull codellama:7b
+
+# Para LlamaCpp
+pip install llama-cpp-python
+
+# Descargar modelo (ejemplo)
+wget https://huggingface.co/TheBloke/CodeLlama-7B-Instruct-GGUF/resolve/main/codellama-7b-instruct.Q4_K_M.gguf
+```
+
 ## 📈 Métricas de Rendimiento
 
 ### Precisión por Capa
@@ -305,7 +377,22 @@ pie title Tipos de Código Muerto Detectados
 # Variables de entorno
 export USE_ADVANCED_DEAD_CODE_ENGINE=true
 export USE_AI_AGENT=true
-export AI_PROVIDER=local  # o "openai"
+
+# Opciones de AI Provider:
+# 1. Heurísticas locales (por defecto - sin LLM)
+export AI_PROVIDER=local
+
+# 2. OpenAI GPT-4
+export AI_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+
+# 3. Anthropic Claude
+export AI_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# 4. Modelos locales (Ollama, LlamaCpp)
+export AI_PROVIDER=local_llm
+export LOCAL_MODEL_PATH=/path/to/codellama-7b
 ```
 
 ### 2. **Instalación de Dependencias**
