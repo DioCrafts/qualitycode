@@ -365,14 +365,14 @@ class AnalyzeProjectUseCase:
                                     # Procesar funciones individuales si están disponibles
                                     if js_result.functions:
                                         for func in js_result.functions:
-                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 5:
                                                 complex_functions.append({
                                                     "file": str(file_path),
                                                     "name": func.name,
                                                     "line": func.start_line if hasattr(func, 'start_line') else 1,
                                                     "complexity": func.metrics.cyclomatic_complexity
                                                 })
-                                    elif js_result.metrics.cyclomatic_complexity > 10:
+                                    elif js_result.metrics.cyclomatic_complexity > 5:
                                         # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),
@@ -409,14 +409,14 @@ class AnalyzeProjectUseCase:
                                     # Procesar funciones individuales si están disponibles
                                     if py_result.functions:
                                         for func in py_result.functions:
-                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 5:
                                                 complex_functions.append({
                                                     "file": str(file_path),
                                                     "name": func.name,
                                                     "line": func.start_line if hasattr(func, 'start_line') else 1,
                                                     "complexity": func.metrics.cyclomatic_complexity
                                                 })
-                                    elif py_result.metrics.cyclomatic_complexity > 10:
+                                    elif py_result.metrics.cyclomatic_complexity > 5:
                                         # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),
@@ -456,14 +456,14 @@ class AnalyzeProjectUseCase:
                                     # Procesar funciones individuales si están disponibles
                                     if rs_result.functions:
                                         for func in rs_result.functions:
-                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 10:
+                                            if hasattr(func, 'metrics') and func.metrics.cyclomatic_complexity > 5:
                                                 complex_functions.append({
                                                     "file": str(file_path),
                                                     "name": func.name,
                                                     "line": func.start_line if hasattr(func, 'start_line') else 1,
                                                     "complexity": func.metrics.cyclomatic_complexity
                                                 })
-                                    elif rs_result.metrics.cyclomatic_complexity > 10:
+                                    elif rs_result.metrics.cyclomatic_complexity > 5:
                                         # Si no hay funciones individuales, usar métricas del archivo
                                         complex_functions.append({
                                             "file": str(file_path),

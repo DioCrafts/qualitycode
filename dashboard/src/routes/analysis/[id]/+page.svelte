@@ -1183,7 +1183,17 @@
                                     <h4>Recomendaciones</h4>
                                     <ul>
                                         {#each analysis.dead_code_results.advanced_analysis.recommendations as rec}
-                                            <li>{rec}</li>
+                                            <li>
+                                                {#if typeof rec === "string"}
+                                                    {rec}
+                                                {:else if rec && rec.text}
+                                                    {rec.text}
+                                                {:else if rec && rec.message}
+                                                    {rec.message}
+                                                {:else}
+                                                    {JSON.stringify(rec)}
+                                                {/if}
+                                            </li>
                                         {/each}
                                     </ul>
                                 </div>
