@@ -19,7 +19,8 @@ from ...domain.entities.dead_code_analysis import (
     UnreachableCode, DeadBranch, UnusedParameter, RedundantAssignment,
     EntryPoint, EntryPointType, UnusedReason,
     UnreachabilityReason, AssignmentType, RedundancyType,
-    SourcePosition, SourceRange, ScopeInfo, ScopeType, Visibility
+    SourcePosition, SourceRange, ScopeInfo, ScopeType, Visibility,
+    ImportStatement, ImportType
 )
 from ...domain.entities.natural_rules.natural_rule import ElementType
 from ...domain.entities.natural_rules.rule_intent import ConditionType
@@ -360,13 +361,24 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         # Implementación básica: simular detección de import no utilizado
         if parse_result.imports and len(parse_result.imports) > 0:
             # Simular un import no utilizado
-            unused_imports.append(UnusedImport(
+            import_location = SourceRange(
+                start=SourcePosition(line=3, column=0),
+                end=SourcePosition(line=3, column=40)
+            )
+            import_statement = ImportStatement(
                 module_name="unused_module",
-                imported_names=["function1", "function2"],
-                import_location=SourceRange(
-                    start=SourcePosition(line=3, column=0),
-                    end=SourcePosition(line=3, column=40)
-                ),
+                imported_symbols=["function1", "function2"],
+                import_type=ImportType.NAMED_IMPORTS,
+                location=import_location,
+                language=parse_result.language
+            )
+            
+            unused_imports.append(UnusedImport(
+                import_statement=import_statement,
+                location=import_location,
+                import_type=ImportType.NAMED_IMPORTS,
+                module_name="unused_module",
+                imported_symbols=["function1", "function2"],
                 reason=UnusedReason.NEVER_REFERENCED,
                 suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
                 confidence=0.95,
