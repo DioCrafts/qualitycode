@@ -651,7 +651,7 @@ class AnalyzeProjectUseCase:
                 "dead_branches": stats.total_dead_branches,
                 "unused_parameters": stats.total_unused_parameters,
                 "redundant_assignments": stats.total_redundant_assignments,
-                "total_dead_code_lines": stats.get_total_lines(),
+                "total_dead_code_lines": stats.lines_of_dead_code,
                 "execution_time_ms": project_analysis.execution_time_ms,
                 "files_analyzed": len(project_analysis.file_analyses)
             }
