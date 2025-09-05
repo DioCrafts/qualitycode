@@ -10,11 +10,26 @@ import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from collections import defaultdict
+from dataclasses import dataclass, field
 
 from ...domain.repositories.parser_repository import ParserRepository
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-from ...domain.entities.parse_result import ParseResult, ParseRequest, FunctionInfo, ClassInfo
+from ...domain.entities.parse_result import ParseResult, ParseRequest
 from ...utils.error import ParseError
+
+@dataclass 
+class FunctionInfo:
+    """Información básica de una función."""
+    name: str
+    line: int
+    params: List[str] = field(default_factory=list)
+    
+@dataclass
+class ClassInfo:
+    """Información básica de una clase."""
+    name: str
+    line: int
+    methods: List[str] = field(default_factory=list)
 
 logger = logging.getLogger(__name__)
 
