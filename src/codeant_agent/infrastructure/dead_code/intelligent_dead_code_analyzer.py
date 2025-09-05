@@ -223,6 +223,93 @@ class IntelligentDeadCodeAnalyzer:
         except Exception as e:
             logger.error(f"Error parsing Python file {file_path}: {e}")
     
+    def _discover_javascript_symbols(self, file_path: Path, content: str):
+        """Descubrir símbolos en archivos JavaScript/TypeScript."""
+        # Implementación simplificada usando regex
+        # En producción, usaríamos un parser real como Esprima o TypeScript Compiler API
+        
+        # Funciones
+        function_patterns = [
+            re.compile(r'function\s+(\w+)\s*\('),  # function name()
+            re.compile(r'const\s+(\w+)\s*=\s*\([^)]*\)\s*=>'),  # const name = () =>
+            re.compile(r'const\s+(\w+)\s*=\s*async\s*\([^)]*\)\s*=>'),  # const name = async () =>
+            re.compile(r'let\s+(\w+)\s*=\s*\([^)]*\)\s*=>'),  # let name = () =>
+            re.compile(r'var\s+(\w+)\s*=\s*function'),  # var name = function
+            re.compile(r'export\s+function\s+(\w+)'),  # export function name
+            re.compile(r'export\s+default\s+function\s+(\w+)'),  # export default function name
+            re.compile(r'export\s+const\s+(\w+)\s*='),  # export const name =
+        ]
+        
+        for pattern in function_patterns:
+            for match in pattern.finditer(content):
+                function_name = match.group(1)
+                symbol_id = f"{file_path}:{function_name}"
+                
+                # Buscar línea del match
+                line_number = content[:match.start()].count('\n') + 1
+                
+                symbol = Symbol(
+                    name=function_name,
+                    type='function',
+                    file_path=str(file_path),
+                    line_number=line_number,
+                    column_number=0,
+                    is_exported='export' in match.group(0),
+                    is_test_code=self._is_test_file(file_path) or 'test' in function_name.lower()
+                )
+                
+                self.symbols[symbol_id] = symbol
+        
+        # Clases
+        class_patterns = [
+            re.compile(r'class\s+(\w+)'),  # class Name
+            re.compile(r'export\s+class\s+(\w+)'),  # export class Name
+            re.compile(r'export\s+default\s+class\s+(\w+)'),  # export default class Name
+        ]
+        
+        for pattern in class_patterns:
+            for match in pattern.finditer(content):
+                class_name = match.group(1)
+                symbol_id = f"{file_path}:{class_name}"
+                
+                line_number = content[:match.start()].count('\n') + 1
+                
+                symbol = Symbol(
+                    name=class_name,
+                    type='class',
+                    file_path=str(file_path),
+                    line_number=line_number,
+                    column_number=0,
+                    is_exported='export' in match.group(0),
+                    is_test_code=self._is_test_file(file_path)
+                )
+                
+                self.symbols[symbol_id] = symbol
+        
+        # Variables/constantes exportadas
+        var_patterns = [
+            re.compile(r'export\s+(?:const|let|var)\s+(\w+)\s*=(?!\s*\()'),  # export const name = (not function)
+            re.compile(r'module\.exports\.(\w+)\s*='),  # module.exports.name =
+        ]
+        
+        for pattern in var_patterns:
+            for match in pattern.finditer(content):
+                var_name = match.group(1)
+                symbol_id = f"{file_path}:{var_name}"
+                
+                line_number = content[:match.start()].count('\n') + 1
+                
+                symbol = Symbol(
+                    name=var_name,
+                    type='variable',
+                    file_path=str(file_path),
+                    line_number=line_number,
+                    column_number=0,
+                    is_exported=True
+                )
+                
+                self.symbols[symbol_id] = symbol
+    
     def _analyze_usages(self):
         """Fase 2: Analizar todos los usos de símbolos."""
         for file_path in self._get_all_source_files():
@@ -546,28 +633,81 @@ class IntelligentDeadCodeAnalyzer:
     def _analyze_javascript_usages(self, file_path: Path, content: str):
         """Analizar usos en archivos JavaScript/TypeScript."""
         # Implementación simplificada - en producción usaría un parser JS real
-        # Buscar patrones de uso comunes
         
-        # Function calls
-        call_pattern = re.compile(r'(\w+)\s*\(')
-        for match in call_pattern.finditer(content):
-            usage = Usage(
-                symbol_name=match.group(1),
-                file_path=str(file_path),
-                line_number=content[:match.start()].count('\n') + 1,
-                usage_type='call',
-                context=match.group(0)
-            )
-            self.usages.append(usage)
+        # Function calls - mejorado para evitar falsos positivos
+        call_patterns = [
+            re.compile(r'(?<!function\s)(?<!class\s)(\w+)\s*\('),  # nombre( pero no function nombre(
+            re.compile(r'\.(\w+)\s*\('),  # .metodo(
+            re.compile(r'new\s+(\w+)\s*\('),  # new Clase(
+        ]
         
-        # Imports
-        import_pattern = re.compile(r'import\s+.*?from\s+["\']([^"\']+)["\']')
-        for match in import_pattern.finditer(content):
-            usage = Usage(
-                symbol_name=match.group(1),
-                file_path=str(file_path),
-                line_number=content[:match.start()].count('\n') + 1,
-                usage_type='import',
-                context=match.group(0)
-            )
-            self.usages.append(usage)
+        for pattern in call_patterns:
+            for match in pattern.finditer(content):
+                symbol_name = match.group(1)
+                # Filtrar palabras reservadas
+                if symbol_name not in ['if', 'for', 'while', 'switch', 'catch', 'function', 'return']:
+                    usage = Usage(
+                        symbol_name=symbol_name,
+                        file_path=str(file_path),
+                        line_number=content[:match.start()].count('\n') + 1,
+                        usage_type='call',
+                        context=match.group(0)
+                    )
+                    self.usages.append(usage)
+        
+        # Imports más completos
+        import_patterns = [
+            # import { symbol } from 'module'
+            re.compile(r'import\s*\{([^}]+)\}\s*from'),
+            # import symbol from 'module'
+            re.compile(r'import\s+(\w+)\s+from'),
+            # import * as symbol from 'module'
+            re.compile(r'import\s*\*\s*as\s+(\w+)\s+from'),
+            # const symbol = require('module')
+            re.compile(r'const\s+(\w+)\s*=\s*require\('),
+            # const { symbol } = require('module')
+            re.compile(r'const\s*\{([^}]+)\}\s*=\s*require\('),
+        ]
+        
+        for pattern in import_patterns:
+            for match in pattern.finditer(content):
+                imports_text = match.group(1)
+                # Manejar múltiples imports { a, b, c }
+                if ',' in imports_text:
+                    for imp in imports_text.split(','):
+                        imp = imp.strip()
+                        if imp:
+                            usage = Usage(
+                                symbol_name=imp,
+                                file_path=str(file_path),
+                                line_number=content[:match.start()].count('\n') + 1,
+                                usage_type='import',
+                                context=match.group(0)
+                            )
+                            self.usages.append(usage)
+                else:
+                    usage = Usage(
+                        symbol_name=imports_text.strip(),
+                        file_path=str(file_path),
+                        line_number=content[:match.start()].count('\n') + 1,
+                        usage_type='import',
+                        context=match.group(0)
+                    )
+                    self.usages.append(usage)
+        
+        # Referencias a propiedades/variables
+        ref_pattern = re.compile(r'(?<!["\'])\b(\w+)\b(?!["\'])')
+        for match in ref_pattern.finditer(content):
+            symbol_name = match.group(1)
+            # Solo agregar si parece una referencia válida
+            if (len(symbol_name) > 1 and 
+                not symbol_name.isdigit() and 
+                symbol_name not in ['true', 'false', 'null', 'undefined', 'this', 'self']):
+                usage = Usage(
+                    symbol_name=symbol_name,
+                    file_path=str(file_path),
+                    line_number=content[:match.start()].count('\n') + 1,
+                    usage_type='reference',
+                    context=match.group(0)
+                )
+                self.usages.append(usage)
