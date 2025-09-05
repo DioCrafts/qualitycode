@@ -18,7 +18,8 @@ from ...domain.entities.dead_code_analysis import (
     UnusedVariable, UnusedFunction, UnusedClass, UnusedImport,
     UnreachableCode, DeadBranch, UnusedParameter, RedundantAssignment,
     EntryPoint, EntryPointType, UnusedReason,
-    UnreachabilityReason, AssignmentType, RedundancyType
+    UnreachabilityReason, AssignmentType, RedundancyType,
+    SourcePosition, SourceRange, ScopeInfo, ScopeType, Visibility
 )
 from ...domain.entities.natural_rules.natural_rule import ElementType
 from ...domain.entities.natural_rules.rule_intent import ConditionType
@@ -28,7 +29,6 @@ from ...domain.entities.dependency_analysis import (
 )
 from ...domain.entities.parse_result import ParseResult
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-from ...domain.value_objects.position import UnifiedPosition
 
 logger = logging.getLogger(__name__)
 
@@ -292,9 +292,12 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             # Simular detección de una variable no utilizada
             unused_variables.append(UnusedVariable(
                 name="unused_var",
-                declaration_location=UnifiedPosition(line=10, column=4),
-                variable_type=ElementType.LOCAL_VARIABLE,
-                scope="function",
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=10, column=4),
+                    end=SourcePosition(line=10, column=15)
+                ),
+                variable_type="local",
+                scope=ScopeInfo(scope_type=ScopeType.FUNCTION, scope_name="main"),
                 reason=UnusedReason.NEVER_REFERENCED,
                 suggestion="Eliminar la variable 'unused_var' ya que nunca es utilizada",
                 confidence=0.9
@@ -321,8 +324,11 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             # Simular que una función no es utilizada
             unused_functions.append(UnusedFunction(
                 name="helper_function",
-                declaration_location=UnifiedPosition(line=25, column=0),
-                visibility="private",
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=25, column=0),
+                    end=SourcePosition(line=35, column=0)
+                ),
+                visibility=Visibility.PRIVATE,
                 parameters=[],
                 reason=UnusedReason.NEVER_CALLED,
                 suggestion="Eliminar la función 'helper_function' ya que nunca es llamada",
@@ -357,7 +363,10 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             unused_imports.append(UnusedImport(
                 module_name="unused_module",
                 imported_names=["function1", "function2"],
-                import_location=UnifiedPosition(line=3, column=0),
+                import_location=SourceRange(
+                    start=SourcePosition(line=3, column=0),
+                    end=SourcePosition(line=3, column=40)
+                ),
                 reason=UnusedReason.NEVER_REFERENCED,
                 suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
                 confidence=0.95,
@@ -382,7 +391,10 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         # Simular detección de código inalcanzable
         if parse_result.language in [ProgrammingLanguage.PYTHON, ProgrammingLanguage.JAVASCRIPT]:
             unreachable_code.append(UnreachableCode(
-                location=UnifiedPosition(line=50, column=4),
+                location=SourceRange(
+                    start=SourcePosition(line=50, column=4),
+                    end=SourcePosition(line=55, column=0)
+                ),
                 code_type="statement",
                 reason=UnreachabilityReason.AFTER_RETURN,
                 suggestion="Eliminar código después del return ya que nunca se ejecutará",
@@ -418,7 +430,10 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             unused_parameters.append(UnusedParameter(
                 function_name="process_data",
                 parameter_name="options",
-                location=UnifiedPosition(line=30, column=20),
+                location=SourceRange(
+                    start=SourcePosition(line=30, column=20),
+                    end=SourcePosition(line=30, column=27)
+                ),
                 reason=UnusedReason.NEVER_REFERENCED,
                 suggestion="Eliminar el parámetro 'options' de la función 'process_data'",
                 confidence=0.8
