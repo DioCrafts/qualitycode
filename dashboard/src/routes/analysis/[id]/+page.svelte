@@ -69,6 +69,22 @@
             analysis = data?.result ? { ...data, ...data.result } : data;
             console.log("Analysis data:", analysis);
             console.log("Dead code results:", analysis?.dead_code_results);
+            console.log(
+                "Unused variables:",
+                analysis?.dead_code_results?.unused_variables,
+            );
+            console.log(
+                "Unused functions:",
+                analysis?.dead_code_results?.unused_functions,
+            );
+            console.log(
+                "Unused classes:",
+                analysis?.dead_code_results?.unused_classes,
+            );
+            console.log(
+                "Advanced analysis:",
+                analysis?.dead_code_results?.advanced_analysis,
+            );
             console.log("Complexity metrics:", analysis?.complexity_metrics);
         } catch (e: any) {
             error = e?.message ?? "Error desconocido";
