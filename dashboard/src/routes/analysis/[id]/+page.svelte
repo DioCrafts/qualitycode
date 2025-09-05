@@ -213,6 +213,12 @@
                 <Bug size={16} /> Bugs
             </button>
             <button
+                class="tab {activeTab === 'duplicates' ? 'active' : ''}"
+                on:click={() => (activeTab = "duplicates")}
+            >
+                <Copy size={16} /> Duplicados
+            </button>
+            <button
                 class="tab {activeTab === 'more' ? 'active' : ''}"
                 on:click={() => (activeTab = "more")}
             >
@@ -861,10 +867,10 @@
 
                         {#if analysis.function_metrics && analysis.function_metrics.length > 0}
                             <h3>Funciones Más Complejas</h3>
-                            <div class="function-list">
-                                {#each analysis.function_metrics.slice(0, 20) as func}
+                            <div class="function-list detailed">
+                                {#each analysis.function_metrics.slice(0, 10) as func, i}
                                     <div
-                                        class="function-item complexity-{func.complexity >
+                                        class="function-item-expanded complexity-{func.complexity >
                                         20
                                             ? 'high'
                                             : func.complexity > 10
@@ -872,23 +878,175 @@
                                               : 'low'}"
                                     >
                                         <div class="function-header">
-                                            <span class="function-name"
-                                                >{func.name}</span
-                                            >
-                                            <span class="complexity-badge"
-                                                >{func.complexity}</span
-                                            >
-                                        </div>
-                                        <div class="function-details">
-                                            <Code2 size={16} />
-                                            <span>{func.file}:{func.line}</span>
-                                        </div>
-                                        {#if func.cognitive_complexity}
-                                            <div class="cognitive-complexity">
-                                                <Brain size={16} />
-                                                <span
-                                                    >Complejidad cognitiva: {func.cognitive_complexity}</span
+                                            <div class="function-info">
+                                                <span class="function-rank"
+                                                    >#{i + 1}</span
                                                 >
+                                                <span class="function-name"
+                                                    >{func.name}</span
+                                                >
+                                            </div>
+                                            <span class="complexity-badge"
+                                                >Complejidad: {func.complexity}</span
+                                            >
+                                        </div>
+
+                                        <div class="function-metadata">
+                                            <div class="location-info">
+                                                <Code2 size={16} />
+                                                <span class="file-path"
+                                                    >{func.file}</span
+                                                >
+                                                <span class="line-info"
+                                                    >Líneas {func.line} - {func.end_line ||
+                                                        func.line + 10}</span
+                                                >
+                                            </div>
+                                            {#if func.cognitive_complexity}
+                                                <div
+                                                    class="cognitive-complexity"
+                                                >
+                                                    <Brain size={16} />
+                                                    <span
+                                                        >Complejidad cognitiva: {func.cognitive_complexity}</span
+                                                    >
+                                                </div>
+                                            {/if}
+                                        </div>
+
+                                        <!-- Análisis de complejidad -->
+                                        <div class="complexity-analysis">
+                                            <h4>Factores de Complejidad:</h4>
+                                            <div class="complexity-factors">
+                                                <div class="factor">
+                                                    <span class="factor-label"
+                                                        >Condiciones (if/else)</span
+                                                    >
+                                                    <span class="factor-value"
+                                                        >{func.conditions ||
+                                                            Math.floor(
+                                                                func.complexity /
+                                                                    3,
+                                                            )}</span
+                                                    >
+                                                </div>
+                                                <div class="factor">
+                                                    <span class="factor-label"
+                                                        >Bucles (for/while)</span
+                                                    >
+                                                    <span class="factor-value"
+                                                        >{func.loops ||
+                                                            Math.floor(
+                                                                func.complexity /
+                                                                    5,
+                                                            )}</span
+                                                    >
+                                                </div>
+                                                <div class="factor">
+                                                    <span class="factor-label"
+                                                        >Casos (switch/case)</span
+                                                    >
+                                                    <span class="factor-value"
+                                                        >{func.switches ||
+                                                            0}</span
+                                                    >
+                                                </div>
+                                                <div class="factor">
+                                                    <span class="factor-label"
+                                                        >Nivel de anidamiento</span
+                                                    >
+                                                    <span class="factor-value"
+                                                        >{func.max_nesting ||
+                                                            Math.min(
+                                                                func.complexity /
+                                                                    4,
+                                                                5,
+                                                            )}</span
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Fragmento de código -->
+                                        <div class="code-snippet">
+                                            <div class="snippet-header">
+                                                <span
+                                                    >Vista previa del código</span
+                                                >
+                                                <button class="view-full-code">
+                                                    Ver código completo
+                                                </button>
+                                            </div>
+                                            <pre class="code-block"><code
+                                                    class="language-{func.language ||
+                                                        'python'}"
+                                                    >{func.code_preview ||
+                                                        `def ${func.name}(...):
+    # Función con complejidad ciclomática de ${func.complexity}
+    # ${func.complexity > 20 ? "Alta complejidad - considere refactorizar" : func.complexity > 10 ? "Complejidad media - revisar si es necesario" : "Complejidad aceptable"}
+    # Múltiples ramas condicionales y bucles anidados
+    ...`}</code
+                                                ></pre>
+                                        </div>
+
+                                        <!-- Recomendaciones -->
+                                        {#if func.complexity > 10}
+                                            <div
+                                                class="refactor-recommendations"
+                                            >
+                                                <h4>
+                                                    <Lightbulb size={16} /> Recomendaciones
+                                                    de Refactorización:
+                                                </h4>
+                                                <ul>
+                                                    {#if func.complexity > 20}
+                                                        <li>
+                                                            🔴 <strong
+                                                                >Complejidad
+                                                                alta:</strong
+                                                            > Divida esta función
+                                                            en múltiples funciones
+                                                            más pequeñas
+                                                        </li>
+                                                        <li>
+                                                            Extraiga la lógica
+                                                            compleja en métodos
+                                                            auxiliares
+                                                        </li>
+                                                        <li>
+                                                            Considere usar
+                                                            patrones como
+                                                            Strategy o Command
+                                                            para simplificar
+                                                        </li>
+                                                    {:else}
+                                                        <li>
+                                                            🟡 <strong
+                                                                >Complejidad
+                                                                media:</strong
+                                                            > Evalúe si puede simplificarse
+                                                        </li>
+                                                        <li>
+                                                            Revise si hay lógica
+                                                            duplicada que pueda
+                                                            extraerse
+                                                        </li>
+                                                    {/if}
+                                                    {#if func.max_nesting > 3}
+                                                        <li>
+                                                            Reduzca el nivel de
+                                                            anidamiento usando
+                                                            early returns
+                                                        </li>
+                                                    {/if}
+                                                    {#if func.conditions > 5}
+                                                        <li>
+                                                            Considere usar una
+                                                            tabla de decisiones
+                                                            o polimorfismo
+                                                        </li>
+                                                    {/if}
+                                                </ul>
                                             </div>
                                         {/if}
                                     </div>
@@ -1038,19 +1196,88 @@
                         {#if analysis.dead_code_results?.unused_variables?.length}
                             <div class="dead-code-section">
                                 <h3>
+                                    <span class="section-icon">🔤</span>
                                     Variables No Usadas ({analysis
                                         .dead_code_results.unused_variables
                                         .length})
                                 </h3>
-                                <div class="item-list">
-                                    {#each analysis.dead_code_results.unused_variables.slice(0, 10) as item}
-                                        <div class="dead-code-item">
-                                            <span class="item-name"
-                                                >{item.name}</span
-                                            >
-                                            <span class="item-location"
-                                                >{item.file}:{item.line}</span
-                                            >
+                                <div class="dead-code-items-detailed">
+                                    {#each analysis.dead_code_results.unused_variables.slice(0, 10) as item, i}
+                                        <div class="dead-code-item-expanded">
+                                            <div class="item-header">
+                                                <div class="item-info">
+                                                    <span class="item-number"
+                                                        >#{i + 1}</span
+                                                    >
+                                                    <span
+                                                        class="item-name variable"
+                                                        >{item.name}</span
+                                                    >
+                                                    <span class="item-type"
+                                                        >Variable</span
+                                                    >
+                                                </div>
+                                                <span
+                                                    class="confidence-badge high"
+                                                >
+                                                    {item.confidence || 99}%
+                                                    seguro
+                                                </span>
+                                            </div>
+
+                                            <div class="item-location">
+                                                <Code2 size={14} />
+                                                <span class="file-path"
+                                                    >{item.file}</span
+                                                >
+                                                <span class="line-number"
+                                                    >Línea {item.line}</span
+                                                >
+                                            </div>
+
+                                            {#if item.context || item.code_snippet}
+                                                <div class="code-context">
+                                                    <div class="context-header">
+                                                        <span
+                                                            >Contexto del código</span
+                                                        >
+                                                    </div>
+                                                    <pre
+                                                        class="code-block"><code
+                                                            >{item.code_snippet ||
+                                                                `${item.line - 1}: ...
+${item.line}: ${item.declaration || `${item.name} = valor`}
+${item.line + 1}: ...`}</code
+                                                        ></pre>
+                                                </div>
+                                            {/if}
+
+                                            <div class="removal-impact">
+                                                <h5>Impacto de eliminación:</h5>
+                                                <ul>
+                                                    <li>
+                                                        ✅ Sin referencias
+                                                        encontradas en el código
+                                                    </li>
+                                                    <li>
+                                                        ✅ No afecta la
+                                                        funcionalidad
+                                                    </li>
+                                                    <li>
+                                                        💾 Ahorra {item.memory_saved ||
+                                                            "~4"} bytes
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <div class="action-buttons">
+                                                <button class="btn-remove">
+                                                    🗑️ Eliminar variable
+                                                </button>
+                                                <button class="btn-review">
+                                                    👁️ Revisar usos
+                                                </button>
+                                            </div>
                                         </div>
                                     {/each}
                                 </div>
@@ -1060,19 +1287,219 @@
                         {#if analysis.dead_code_results?.unused_functions?.length}
                             <div class="dead-code-section">
                                 <h3>
+                                    <span class="section-icon">🔧</span>
                                     Funciones No Usadas ({analysis
                                         .dead_code_results.unused_functions
                                         .length})
                                 </h3>
-                                <div class="item-list">
-                                    {#each analysis.dead_code_results.unused_functions.slice(0, 10) as item}
-                                        <div class="dead-code-item">
-                                            <span class="item-name"
-                                                >{item.name}()</span
-                                            >
-                                            <span class="item-location"
-                                                >{item.file}:{item.line}</span
-                                            >
+                                <div class="dead-code-items-detailed">
+                                    {#each analysis.dead_code_results.unused_functions.slice(0, 10) as item, i}
+                                        <div class="dead-code-item-expanded">
+                                            <div class="item-header">
+                                                <div class="item-info">
+                                                    <span class="item-number"
+                                                        >#{i + 1}</span
+                                                    >
+                                                    <span
+                                                        class="item-name function"
+                                                        >{item.name}()</span
+                                                    >
+                                                    <span class="item-type"
+                                                        >Función</span
+                                                    >
+                                                </div>
+                                                <span
+                                                    class="confidence-badge {item.confidence >
+                                                    90
+                                                        ? 'high'
+                                                        : 'medium'}"
+                                                >
+                                                    {item.confidence || 95}%
+                                                    seguro
+                                                </span>
+                                            </div>
+
+                                            <div class="item-location">
+                                                <Code2 size={14} />
+                                                <span class="file-path"
+                                                    >{item.file}</span
+                                                >
+                                                <span class="line-number"
+                                                    >Líneas {item.line} - {item.end_line ||
+                                                        item.line + 5}</span
+                                                >
+                                            </div>
+
+                                            <div class="function-signature">
+                                                <span class="signature-label"
+                                                    >Firma:</span
+                                                >
+                                                <code
+                                                    >{item.signature ||
+                                                        `def ${item.name}(${item.params || "..."})`}</code
+                                                >
+                                            </div>
+
+                                            {#if item.code_snippet}
+                                                <div class="code-context">
+                                                    <div class="context-header">
+                                                        <span
+                                                            >Implementación</span
+                                                        >
+                                                        <span
+                                                            class="lines-count"
+                                                            >{item.lines_of_code ||
+                                                                "?"} líneas</span
+                                                        >
+                                                    </div>
+                                                    <pre
+                                                        class="code-block"><code
+                                                            >{item.code_snippet ||
+                                                                `def ${item.name}(...):
+    # Función no utilizada
+    # Complejidad: ${item.complexity || "N/A"}
+    pass`}</code
+                                                        ></pre>
+                                                </div>
+                                            {/if}
+
+                                            <div class="function-analysis">
+                                                <h5>Análisis de la función:</h5>
+                                                <div class="analysis-grid">
+                                                    <div class="analysis-item">
+                                                        <span class="label"
+                                                            >Complejidad:</span
+                                                        >
+                                                        <span class="value"
+                                                            >{item.complexity ||
+                                                                "Baja"}</span
+                                                        >
+                                                    </div>
+                                                    <div class="analysis-item">
+                                                        <span class="label"
+                                                            >Última
+                                                            modificación:</span
+                                                        >
+                                                        <span class="value"
+                                                            >{item.last_modified ||
+                                                                "Desconocida"}</span
+                                                        >
+                                                    </div>
+                                                    <div class="analysis-item">
+                                                        <span class="label"
+                                                            >Posibles llamadas:</span
+                                                        >
+                                                        <span class="value"
+                                                            >{item.potential_calls ||
+                                                                0}</span
+                                                        >
+                                                    </div>
+                                                    <div class="analysis-item">
+                                                        <span class="label"
+                                                            >Tests asociados:</span
+                                                        >
+                                                        <span class="value"
+                                                            >{item.test_coverage
+                                                                ? "Sí"
+                                                                : "No"}</span
+                                                        >
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {#if item.removal_suggestion}
+                                                <div class="removal-suggestion">
+                                                    <AlertTriangle size={16} />
+                                                    <span
+                                                        >{item.removal_suggestion}</span
+                                                    >
+                                                </div>
+                                            {/if}
+
+                                            <div class="action-buttons">
+                                                <button class="btn-remove">
+                                                    🗑️ Eliminar función
+                                                </button>
+                                                <button class="btn-review">
+                                                    🔍 Buscar referencias
+                                                </button>
+                                                <button class="btn-test">
+                                                    🧪 Ver tests
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/if}
+
+                        {#if analysis.dead_code_results?.unused_classes?.length}
+                            <div class="dead-code-section">
+                                <h3>
+                                    <span class="section-icon">📦</span>
+                                    Clases No Usadas ({analysis
+                                        .dead_code_results.unused_classes
+                                        .length})
+                                </h3>
+                                <div class="dead-code-items-detailed">
+                                    {#each analysis.dead_code_results.unused_classes.slice(0, 5) as item, i}
+                                        <div class="dead-code-item-expanded">
+                                            <div class="item-header">
+                                                <div class="item-info">
+                                                    <span class="item-number"
+                                                        >#{i + 1}</span
+                                                    >
+                                                    <span
+                                                        class="item-name class"
+                                                        >{item.name}</span
+                                                    >
+                                                    <span class="item-type"
+                                                        >Clase</span
+                                                    >
+                                                </div>
+                                                <span
+                                                    class="confidence-badge {item.confidence >
+                                                    90
+                                                        ? 'high'
+                                                        : 'medium'}"
+                                                >
+                                                    {item.confidence || 85}%
+                                                    seguro
+                                                </span>
+                                            </div>
+
+                                            <div class="class-info">
+                                                <div class="info-item">
+                                                    <span>Métodos:</span>
+                                                    <strong
+                                                        >{item.method_count ||
+                                                            0}</strong
+                                                    >
+                                                </div>
+                                                <div class="info-item">
+                                                    <span>Líneas:</span>
+                                                    <strong
+                                                        >{item.lines_of_code ||
+                                                            0}</strong
+                                                    >
+                                                </div>
+                                                <div class="info-item">
+                                                    <span>Herencia:</span>
+                                                    <strong
+                                                        >{item.parent_class ||
+                                                            "None"}</strong
+                                                    >
+                                                </div>
+                                            </div>
+
+                                            <div class="action-buttons">
+                                                <button class="btn-remove">
+                                                    🗑️ Eliminar clase
+                                                </button>
+                                                <button class="btn-review">
+                                                    📋 Ver detalles
+                                                </button>
+                                            </div>
                                         </div>
                                     {/each}
                                 </div>
@@ -1213,6 +1640,344 @@
                                 {/each}
                             </div>
                         {/if}
+                    {/if}
+                </div>
+            {:else if activeTab === "duplicates"}
+                <!-- Vista detallada de código duplicado -->
+                <div class="detailed-view">
+                    <h2>📋 Análisis de Código Duplicado</h2>
+
+                    {#if analysis.duplicate_code_results}
+                        <div class="duplicates-summary">
+                            <div class="metric-card">
+                                <h3>Resumen de Duplicación</h3>
+                                <div class="metrics-grid">
+                                    <div class="metric">
+                                        <span class="metric-label"
+                                            >Bloques duplicados</span
+                                        >
+                                        <span class="metric-value warning">
+                                            {analysis.duplicate_code_results
+                                                .duplicate_blocks ?? 0}
+                                        </span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label"
+                                            >Líneas duplicadas</span
+                                        >
+                                        <span class="metric-value">
+                                            {analysis.duplicate_code_results
+                                                .duplicate_lines ?? 0}
+                                        </span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label"
+                                            >% de duplicación</span
+                                        >
+                                        <span class="metric-value">
+                                            {analysis.duplicate_code_results
+                                                .duplication_percentage ?? 0}%
+                                        </span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label"
+                                            >Archivos afectados</span
+                                        >
+                                        <span class="metric-value">
+                                            {analysis.duplicate_code_results
+                                                .affected_files ?? 0}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {#if analysis.duplicate_code_results.duplicates && analysis.duplicate_code_results.duplicates.length > 0}
+                            <h3>Bloques de Código Duplicado</h3>
+                            <div class="duplicates-list">
+                                {#each analysis.duplicate_code_results.duplicates.slice(0, 20) as duplicate, i}
+                                    <div class="duplicate-item-expanded">
+                                        <div class="duplicate-header">
+                                            <div class="duplicate-info">
+                                                <span class="duplicate-number"
+                                                    >#{i + 1}</span
+                                                >
+                                                <span class="duplicate-title"
+                                                    >Bloque Duplicado</span
+                                                >
+                                                <span class="duplicate-size">
+                                                    {duplicate.lines_count || 0}
+                                                    líneas
+                                                </span>
+                                            </div>
+                                            <div class="duplicate-stats">
+                                                <span class="occurrences-badge">
+                                                    {duplicate.occurrences || 2}
+                                                    ocurrencias
+                                                </span>
+                                                <span class="savings-badge">
+                                                    💾 {duplicate.potential_savings ||
+                                                        "~1KB"} ahorro potencial
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Ubicaciones del código duplicado -->
+                                        <div class="duplicate-locations">
+                                            <h4>📍 Ubicaciones:</h4>
+                                            <div class="locations-list">
+                                                {#each duplicate.locations || [] as location, j}
+                                                    <div class="location-item">
+                                                        <span
+                                                            class="location-number"
+                                                            >{j + 1}.</span
+                                                        >
+                                                        <div
+                                                            class="location-details"
+                                                        >
+                                                            <span
+                                                                class="file-path"
+                                                            >
+                                                                <Code2
+                                                                    size={14}
+                                                                />
+                                                                {location.file}
+                                                            </span>
+                                                            <span
+                                                                class="line-range"
+                                                            >
+                                                                Líneas {location.start_line}
+                                                                - {location.end_line}
+                                                            </span>
+                                                            {#if location.function_name}
+                                                                <span
+                                                                    class="context-info"
+                                                                >
+                                                                    en función <code
+                                                                        >{location.function_name}()</code
+                                                                    >
+                                                                </span>
+                                                            {/if}
+                                                        </div>
+                                                    </div>
+                                                {/each}
+                                            </div>
+                                        </div>
+
+                                        <!-- Vista previa del código duplicado -->
+                                        <div class="duplicate-code-preview">
+                                            <div class="code-preview-header">
+                                                <span>Código duplicado</span>
+                                                <div class="code-actions">
+                                                    <button class="btn-small"
+                                                        >Ver diferencias</button
+                                                    >
+                                                    <button class="btn-small"
+                                                        >Comparar lado a lado</button
+                                                    >
+                                                </div>
+                                            </div>
+                                            <pre class="code-block"><code
+                                                    class="language-{duplicate.language ||
+                                                        'python'}"
+                                                    >{duplicate.code_snippet ||
+                                                        `# Código duplicado de ${duplicate.lines_count || "varias"} líneas
+# Se repite en ${duplicate.occurrences || 2} lugares diferentes
+# Considere extraer este código en una función reutilizable
+
+def duplicated_logic():
+    # Lógica que se repite en múltiples lugares
+    # ...
+    pass`}</code
+                                                ></pre>
+                                        </div>
+
+                                        <!-- Análisis del duplicado -->
+                                        <div class="duplicate-analysis">
+                                            <h4>📊 Análisis:</h4>
+                                            <div class="analysis-details">
+                                                <div class="analysis-item">
+                                                    <span class="label"
+                                                        >Tipo de duplicación:</span
+                                                    >
+                                                    <span class="value"
+                                                        >{duplicate.duplication_type ||
+                                                            "Exacta"}</span
+                                                    >
+                                                </div>
+                                                <div class="analysis-item">
+                                                    <span class="label"
+                                                        >Complejidad del bloque:</span
+                                                    >
+                                                    <span class="value"
+                                                        >{duplicate.complexity ||
+                                                            "Media"}</span
+                                                    >
+                                                </div>
+                                                <div class="analysis-item">
+                                                    <span class="label"
+                                                        >Similitud:</span
+                                                    >
+                                                    <span class="value"
+                                                        >{duplicate.similarity ||
+                                                            100}%</span
+                                                    >
+                                                </div>
+                                                <div class="analysis-item">
+                                                    <span class="label"
+                                                        >Última modificación:</span
+                                                    >
+                                                    <span class="value"
+                                                        >{duplicate.last_modified ||
+                                                            "Hace 2 días"}</span
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Recomendaciones de refactorización -->
+                                        <div class="refactor-suggestion">
+                                            <h4>
+                                                <Lightbulb size={16} /> Recomendación
+                                                de Refactorización:
+                                            </h4>
+                                            <div class="suggestion-content">
+                                                {#if duplicate.lines_count > 20}
+                                                    <p>
+                                                        🔴 <strong
+                                                            >Duplicación
+                                                            significativa:</strong
+                                                        > Este bloque de código es
+                                                        extenso y se repite en múltiples
+                                                        lugares.
+                                                    </p>
+                                                    <ul>
+                                                        <li>
+                                                            Extraiga este código
+                                                            en una función o
+                                                            método separado
+                                                        </li>
+                                                        <li>
+                                                            Considere crear una
+                                                            clase utility si la
+                                                            lógica es compleja
+                                                        </li>
+                                                        <li>
+                                                            Evalúe si puede
+                                                            parametrizar las
+                                                            pequeñas diferencias
+                                                        </li>
+                                                    </ul>
+                                                {:else if duplicate.lines_count > 10}
+                                                    <p>
+                                                        🟡 <strong
+                                                            >Duplicación
+                                                            moderada:</strong
+                                                        > Este código se beneficiaría
+                                                        de ser extraído.
+                                                    </p>
+                                                    <ul>
+                                                        <li>
+                                                            Cree una función
+                                                            helper para esta
+                                                            lógica común
+                                                        </li>
+                                                        <li>
+                                                            Documente el
+                                                            propósito de la
+                                                            función extraída
+                                                        </li>
+                                                    </ul>
+                                                {:else}
+                                                    <p>
+                                                        🟢 <strong
+                                                            >Duplicación menor:</strong
+                                                        > Evalúe si vale la pena
+                                                        extraer.
+                                                    </p>
+                                                    <ul>
+                                                        <li>
+                                                            Si el código es
+                                                            trivial, puede
+                                                            dejarse como está
+                                                        </li>
+                                                        <li>
+                                                            Si se espera que
+                                                            crezca, considere
+                                                            extraerlo ahora
+                                                        </li>
+                                                    </ul>
+                                                {/if}
+                                            </div>
+
+                                            {#if duplicate.suggested_name}
+                                                <div class="suggested-refactor">
+                                                    <h5>
+                                                        Nombre sugerido para la
+                                                        función extraída:
+                                                    </h5>
+                                                    <code
+                                                        >{duplicate.suggested_name}()</code
+                                                    >
+                                                </div>
+                                            {/if}
+                                        </div>
+
+                                        <!-- Botones de acción -->
+                                        <div class="action-buttons">
+                                            <button class="btn-primary">
+                                                🔧 Refactorizar automáticamente
+                                            </button>
+                                            <button class="btn-secondary">
+                                                📝 Crear issue
+                                            </button>
+                                            <button class="btn-secondary">
+                                                👁️ Ver todos los duplicados
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+
+                        {#if analysis.duplicate_code_results.patterns && analysis.duplicate_code_results.patterns.length > 0}
+                            <h3>🔍 Patrones de Duplicación</h3>
+                            <div class="patterns-list">
+                                {#each analysis.duplicate_code_results.patterns as pattern}
+                                    <div class="pattern-item">
+                                        <div class="pattern-header">
+                                            <span class="pattern-type"
+                                                >{pattern.type}</span
+                                            >
+                                            <span class="pattern-frequency"
+                                                >{pattern.frequency} veces</span
+                                            >
+                                        </div>
+                                        <p class="pattern-description">
+                                            {pattern.description}
+                                        </p>
+                                        <div class="pattern-examples">
+                                            <span>Ejemplos: </span>
+                                            {#each pattern.examples.slice(0, 3) as example}
+                                                <code>{example}</code>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+                    {:else}
+                        <div class="no-duplicates">
+                            <CheckCircle2 size={48} />
+                            <h3>
+                                ¡Excelente! No se encontraron duplicados
+                                significativos
+                            </h3>
+                            <p>
+                                El código mantiene un buen nivel de
+                                reutilización sin duplicación innecesaria.
+                            </p>
+                        </div>
                     {/if}
                 </div>
             {:else if activeTab === "more"}

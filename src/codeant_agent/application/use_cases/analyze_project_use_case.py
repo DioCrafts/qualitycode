@@ -522,13 +522,61 @@ class AnalyzeProjectUseCase:
                         })
                         logger.info(f"Patrón cross-language encontrado: {concept.value} en {list(concept_count.keys())}")
             
-            # Generar métricas mejoradas
+            # Procesar las funciones complejas para agregar más detalles
+            detailed_complex_functions = []
+            for func in complex_functions[:20]:  # Top 20 funciones más complejas
+                try:
+                    # Leer el archivo para obtener el código real
+                    with open(func['file'], 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+                        
+                    # Obtener información adicional según el tipo de archivo
+                    file_ext = os.path.splitext(func['file'])[1]
+                    function_metrics = await self._extract_function_metrics(func['file'], lines, file_ext)
+                    
+                    # Buscar la función específica
+                    for fm in function_metrics:
+                        if fm.get('complexity', 0) == func['complexity']:
+                            detailed_func = {
+                                'name': fm.get('name', 'unknown'),
+                                'file': func['file'],
+                                'line': fm.get('line', 1),
+                                'end_line': fm.get('end_line', fm.get('line', 1) + 10),
+                                'complexity': func['complexity'],
+                                'cognitive_complexity': fm.get('cognitive_complexity'),
+                                'branches': fm.get('branches', 0),
+                                'loops': fm.get('loops', 0),
+                                'conditions': fm.get('conditions', 0),
+                                'max_nesting': fm.get('max_nesting', 0),
+                                'switches': fm.get('switches', 0),
+                                'language': file_ext[1:] if file_ext else 'unknown',
+                                'code_preview': fm.get('code_preview', ''),
+                                'complexity_reasons': fm.get('complexity_reasons', [])
+                            }
+                            detailed_complex_functions.append(detailed_func)
+                            break
+                    else:
+                        # Si no encontramos métricas detalladas, usar información básica
+                        detailed_complex_functions.append({
+                            'name': f'function_{len(detailed_complex_functions) + 1}',
+                            'file': func['file'],
+                            'line': 1,
+                            'complexity': func['complexity'],
+                            'language': file_ext[1:] if file_ext else 'unknown'
+                        })
+                        
+                except Exception as e:
+                    logger.error(f"Error procesando función compleja en {func['file']}: {e}")
+                    detailed_complex_functions.append(func)
+            
+            # Generar métricas mejoradas con función metrics detalladas
             results.complexity_metrics = {
                 "average_complexity": round(sum(f['complexity'] for f in complex_functions) / max(1, len(complex_functions)), 2) if complex_functions else 5.2,
                 "max_complexity": max((f['complexity'] for f in complex_functions), default=15),
                 "complex_functions": len(complex_functions),
                 "total_functions": total_functions,
                 "complexity_hotspots": complex_functions[:5],  # Top 5 funciones complejas
+                "function_metrics": detailed_complex_functions,  # Métricas detalladas por función
                 "cross_language_analysis": cross_language_results
             }
             
@@ -622,14 +670,44 @@ class AnalyzeProjectUseCase:
                     
                     # Procesar items por tipo y confianza
                     for item in advanced_results.get("dead_code_items", []):
+                        # Leer el archivo para obtener el fragmento de código
+                        code_snippet = ""
+                        try:
+                            with open(item.file_path, 'r', encoding='utf-8') as f:
+                                lines = f.readlines()
+                                if 0 <= item.line_number - 1 < len(lines):
+                                    # Obtener contexto: 2 líneas antes y después
+                                    start_line = max(0, item.line_number - 3)
+                                    end_line = min(len(lines), item.line_number + 2)
+                                    code_lines = lines[start_line:end_line]
+                                    code_snippet = ''.join(code_lines)
+                        except Exception as e:
+                            logger.error(f"Error leyendo código de {item.file_path}: {e}")
+                        
                         item_data = {
                             "name": item.symbol_name,
                             "file": item.file_path,
                             "line": item.line_number,
-                            "confidence": f"{item.confidence * 100:.1f}%",
+                            "confidence": item.confidence * 100,  # Número para el frontend
                             "reason": item.reason,
-                            "safe_to_delete": item.safe_to_delete
+                            "safe_to_delete": item.safe_to_delete,
+                            "code_snippet": code_snippet,
+                            "declaration": f"{item.symbol_name} = ..." if item.symbol_type == 'variable' else None,
+                            "signature": f"def {item.symbol_name}(...)" if item.symbol_type == 'function' else None,
+                            "complexity": getattr(item, 'complexity', None),
+                            "last_modified": getattr(item, 'last_modified', None),
+                            "test_coverage": getattr(item, 'has_tests', False),
+                            "potential_calls": getattr(item, 'potential_calls', 0),
+                            "lines_of_code": getattr(item, 'lines_of_code', 0),
+                            "method_count": getattr(item, 'method_count', 0) if item.symbol_type == 'class' else None,
+                            "parent_class": getattr(item, 'parent_class', None) if item.symbol_type == 'class' else None
                         }
+                        
+                        # Agregar sugerencia de eliminación si es seguro
+                        if item.safe_to_delete:
+                            item_data["removal_suggestion"] = "Este elemento es seguro para eliminar. No se encontraron referencias."
+                        elif item.confidence < 0.8:
+                            item_data["removal_suggestion"] = "Revisar cuidadosamente antes de eliminar. Pueden existir referencias dinámicas."
                         
                         # Clasificar por tipo
                         if item.symbol_type == 'variable':
@@ -887,10 +965,13 @@ class AnalyzeProjectUseCase:
             # Calcular porcentaje estimado
             duplicate_percentage = (duplicate_blocks / max(results.files_analyzed, 1)) * 100
             
-            results.duplicate_results = {
+            results.duplicate_code_results = {
                 "duplicate_blocks": duplicate_blocks,
                 "duplicate_lines": duplicate_blocks * 20,  # Estimación
-                "duplicate_percentage": min(duplicate_percentage, 15.0),
+                "duplication_percentage": min(duplicate_percentage, 15.0),
+                "affected_files": duplicate_blocks,
+                "duplicates": [],  # Lista vacía por ahora, implementación completa después
+                "patterns": [],
                 "largest_duplicate": {
                     "lines": 0,
                     "occurrences": 0,
@@ -905,6 +986,165 @@ class AnalyzeProjectUseCase:
         except Exception as e:
             logger.error(f"Error en análisis de duplicados: {str(e)}")
             results.errors.append(f"Error en análisis de duplicados: {str(e)}")
+    
+    async def _extract_function_metrics(self, file_path: str, lines: List[str], file_ext: str) -> List[Dict[str, Any]]:
+        """Extraer métricas detalladas de las funciones en un archivo."""
+        functions = []
+        
+        try:
+            if file_ext in ['.py', '.pyw']:
+                # Análisis Python
+                import ast
+                import re
+                
+                content = ''.join(lines)
+                try:
+                    tree = ast.parse(content)
+                except:
+                    return functions
+                
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        # Extraer métricas de la función
+                        complexity = self._calculate_python_complexity(node)
+                        start_line = node.lineno
+                        end_line = node.end_lineno if hasattr(node, 'end_lineno') else start_line + 10
+                        
+                        # Obtener preview del código
+                        code_lines = lines[start_line - 1:min(end_line, start_line + 20)]
+                        code_preview = ''.join(code_lines)
+                        
+                        # Analizar detalles de complejidad
+                        branches = sum(1 for n in ast.walk(node) if isinstance(n, (ast.If, ast.For, ast.While)))
+                        loops = sum(1 for n in ast.walk(node) if isinstance(n, (ast.For, ast.While)))
+                        conditions = sum(1 for n in ast.walk(node) if isinstance(n, ast.If))
+                        
+                        # Calcular anidamiento máximo
+                        max_nesting = self._calculate_max_nesting(node, 0)
+                        
+                        # Razones de complejidad
+                        complexity_reasons = []
+                        if branches > 5:
+                            complexity_reasons.append(f"Alto número de ramas condicionales ({branches})")
+                        if loops > 2:
+                            complexity_reasons.append(f"Múltiples bucles ({loops})")
+                        if max_nesting > 3:
+                            complexity_reasons.append(f"Anidamiento profundo (nivel {max_nesting})")
+                        
+                        functions.append({
+                            'name': node.name,
+                            'line': start_line,
+                            'end_line': end_line,
+                            'complexity': complexity,
+                            'cognitive_complexity': complexity * 1.2,  # Estimación
+                            'branches': branches,
+                            'loops': loops,
+                            'conditions': conditions,
+                            'max_nesting': max_nesting,
+                            'switches': 0,  # Python no tiene switch hasta 3.10
+                            'code_preview': code_preview,
+                            'complexity_reasons': complexity_reasons
+                        })
+                        
+            elif file_ext in ['.js', '.jsx', '.ts', '.tsx']:
+                # Análisis JavaScript/TypeScript básico con regex
+                import re
+                
+                content = ''.join(lines)
+                
+                # Buscar funciones
+                func_pattern = re.compile(
+                    r'(?:async\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:async\s*)?\(|(\w+)\s*:\s*(?:async\s*)?\()',
+                    re.MULTILINE
+                )
+                
+                for match in func_pattern.finditer(content):
+                    func_name = match.group(1) or match.group(2) or match.group(3) or 'anonymous'
+                    start_pos = match.start()
+                    start_line = content[:start_pos].count('\n') + 1
+                    
+                    # Buscar el final de la función (simplificado)
+                    brace_count = 0
+                    end_pos = start_pos
+                    in_function = False
+                    
+                    for i, char in enumerate(content[start_pos:], start_pos):
+                        if char == '{':
+                            brace_count += 1
+                            in_function = True
+                        elif char == '}' and in_function:
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_pos = i
+                                break
+                    
+                    end_line = content[:end_pos].count('\n') + 1
+                    
+                    # Obtener el código de la función
+                    func_content = content[start_pos:end_pos + 1]
+                    code_preview = '\n'.join(func_content.split('\n')[:20])
+                    
+                    # Contar estructuras de control
+                    branches = len(re.findall(r'\b(if|for|while|switch)\b', func_content))
+                    loops = len(re.findall(r'\b(for|while)\b', func_content))
+                    conditions = len(re.findall(r'\bif\b', func_content))
+                    switches = len(re.findall(r'\bswitch\b', func_content))
+                    
+                    # Estimar complejidad
+                    complexity = branches + switches + 1
+                    
+                    # Razones de complejidad
+                    complexity_reasons = []
+                    if complexity > 10:
+                        complexity_reasons.append("Función con alta complejidad ciclomática")
+                    if '?.forEach' in func_content or 'await' in func_content and 'forEach' in func_content:
+                        complexity_reasons.append("Uso de forEach con async/await")
+                    
+                    functions.append({
+                        'name': func_name,
+                        'line': start_line,
+                        'end_line': end_line,
+                        'complexity': complexity,
+                        'branches': branches,
+                        'loops': loops,
+                        'conditions': conditions,
+                        'switches': switches,
+                        'code_preview': code_preview,
+                        'complexity_reasons': complexity_reasons
+                    })
+                    
+        except Exception as e:
+            logger.error(f"Error extrayendo métricas de {file_path}: {e}")
+            
+        return functions
+    
+    def _calculate_python_complexity(self, node: ast.AST) -> int:
+        """Calcular complejidad ciclomática de una función Python."""
+        complexity = 1  # Base complexity
+        
+        for child in ast.walk(node):
+            if isinstance(child, (ast.If, ast.While, ast.For)):
+                complexity += 1
+            elif isinstance(child, ast.ExceptHandler):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+                
+        return complexity
+    
+    def _calculate_max_nesting(self, node: ast.AST, current_depth: int) -> int:
+        """Calcular el nivel máximo de anidamiento en una función."""
+        max_depth = current_depth
+        
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.If, ast.For, ast.While, ast.With)):
+                child_depth = self._calculate_max_nesting(child, current_depth + 1)
+                max_depth = max(max_depth, child_depth)
+            else:
+                child_depth = self._calculate_max_nesting(child, current_depth)
+                max_depth = max(max_depth, child_depth)
+                
+        return max_depth
     
     def _calculate_quality_score(self, results: AnalysisResults) -> float:
         """
