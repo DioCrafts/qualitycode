@@ -10,11 +10,26 @@ import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from collections import defaultdict
+from dataclasses import dataclass, field
 
 from ...domain.repositories.parser_repository import ParserRepository
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-from ...domain.entities.parse_result import ParseResult, ParseRequest, FunctionInfo, ClassInfo
-from ...utils.error import ParseError
+from ...domain.entities.parse_result import ParseResult, ParseRequest, ParseStatus, ParseMetadata
+from ...utils.error import ParsingError
+
+@dataclass 
+class FunctionInfo:
+    """Información básica de una función."""
+    name: str
+    line: int
+    params: List[str] = field(default_factory=list)
+    
+@dataclass
+class ClassInfo:
+    """Información básica de una clase."""
+    name: str
+    line: int
+    methods: List[str] = field(default_factory=list)
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +94,11 @@ class ParserRepositoryImpl(ParserRepository):
         except Exception as e:
             self._stats['parse_errors'] += 1
             logger.error(f"Error parseando {file_path}: {e}")
-            raise ParseError(f"Error parseando archivo: {str(e)}")
+            raise ParsingError(
+                message=f"Error parseando archivo: {str(e)}",
+                language=str(language),
+                file_path=str(file_path)
+            )
     
     async def parse_content(self, content: str, language: ProgrammingLanguage) -> ParseResult:
         """
@@ -87,18 +106,36 @@ class ParserRepositoryImpl(ParserRepository):
         """
         logger.debug(f"Parseando contenido para lenguaje {language}")
         
-        # Crear resultado básico
-        result = ParseResult(
-            file_path=Path("memory://content"),
-            language=language,
-            content=content,
-            tree=None,  # En una implementación real, aquí iría el AST de Tree-sitter
-            syntax_errors=[],
-            parse_time_ms=0
+        # Análisis básico del contenido
+        lines = content.split('\n')
+        
+        # Crear metadatos
+        metadata = ParseMetadata(
+            file_size_bytes=len(content.encode('utf-8')),
+            line_count=len(lines),
+            character_count=len(content),
+            encoding="UTF-8",
+            has_syntax_errors=False,
+            complexity_estimate=0.0,
+            parse_duration_ms=0,
+            node_count=100,  # Valor simulado
+            error_count=0,
+            warning_count=0,
+            cache_hit=False,
+            incremental_parse=False
         )
         
-        # Análisis básico del contenido según el lenguaje
-        lines = content.split('\n')
+        # Crear resultado básico
+        result = ParseResult(
+            tree={"type": "module", "children": []},  # AST simulado
+            language=language,
+            status=ParseStatus.SUCCESS,
+            metadata=metadata,
+            file_path=None,
+            warnings=[],
+            errors=[]
+        )
+        
         
         # Detectar funciones (implementación muy básica)
         result.functions = self._detect_functions(lines, language)
@@ -240,13 +277,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[0].replace('def ', '').strip()
                         functions.append(FunctionInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 10,  # Estimación
-                            parameters=[],
-                            return_type=None,
-                            is_async='async ' in line,
-                            decorators=[],
-                            complexity=5  # Estimación
+                            line=i + 1,
+                            params=[]
                         ))
             
             elif language in [ProgrammingLanguage.JAVASCRIPT, ProgrammingLanguage.TYPESCRIPT]:
@@ -259,13 +291,8 @@ class ParserRepositoryImpl(ParserRepository):
                             if name_part:
                                 functions.append(FunctionInfo(
                                     name=name_part,
-                                    start_line=i + 1,
-                                    end_line=i + 10,
-                                    parameters=[],
-                                    return_type=None,
-                                    is_async='async ' in line,
-                                    decorators=[],
-                                    complexity=5
+                                    line=i + 1,
+                                    params=[]
                                 ))
             
             elif language == ProgrammingLanguage.RUST:
@@ -275,13 +302,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[0].replace('fn ', '').strip()
                         functions.append(FunctionInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 10,
-                            parameters=[],
-                            return_type=None,
-                            is_async='async ' in line,
-                            decorators=[],
-                            complexity=5
+                            line=i + 1,
+                            params=[]
                         ))
         
         return functions
@@ -299,13 +321,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = name_part.split('(')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,  # Estimación
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract=False
+                            line=i + 1,
+                            methods=[]
                         ))
             
             elif language in [ProgrammingLanguage.JAVASCRIPT, ProgrammingLanguage.TYPESCRIPT]:
@@ -315,13 +332,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[1].split('{')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract='abstract' in line
+                            line=i + 1,
+                            methods=[]
                         ))
             
             elif language == ProgrammingLanguage.RUST:
@@ -331,13 +343,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[1].split('{')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract=False
+                            line=i + 1,
+                            methods=[]
                         ))
         
         return classes

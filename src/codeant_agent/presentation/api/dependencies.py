@@ -48,10 +48,11 @@ def get_dead_code_engine() -> Optional[Any]:
 def get_analyze_project_use_case():
     """Obtener instancia del caso de uso de análisis."""
     from ...application.use_cases.analyze_project_use_case import AnalyzeProjectUseCase
-    
+    from ...infrastructure.security.security_analyzer import SecurityAnalyzer
+
     return AnalyzeProjectUseCase(
         project_repository=get_project_repository(),
         parser_factory=get_parser_factory(),
         dead_code_engine=get_dead_code_engine(),
-        security_analyzer=None  # Por ahora sin analyzer de seguridad
+        security_analyzer=SecurityAnalyzer()  # Ahora con analyzer de seguridad
     )

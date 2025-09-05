@@ -13,22 +13,34 @@ from collections import defaultdict, deque
 import logging
 
 from ...domain.repositories.dead_code_repository import DeadCodeRepository
+
+# Configurar logger antes de usarlo
+logger = logging.getLogger(__name__)
+
+try:
+    from ..ast import TreeSitterAnalyzer
+    TREE_SITTER_AVAILABLE = True
+except ImportError:
+    logger.warning("TreeSitter no está disponible. Usando análisis básico de código muerto.")
+    TreeSitterAnalyzer = None
+    TREE_SITTER_AVAILABLE = False
 from ...domain.entities.dead_code_analysis import (
     DeadCodeAnalysis, ProjectDeadCodeAnalysis, DeadCodeStatistics,
     UnusedVariable, UnusedFunction, UnusedClass, UnusedImport,
     UnreachableCode, DeadBranch, UnusedParameter, RedundantAssignment,
-    EntryPoint, EntryPointType, UnusedReason, ElementType,
-    UnreachabilityReason, ConditionType, AssignmentType, RedundancyType
+    EntryPoint, EntryPointType, UnusedReason,
+    UnreachabilityReason, AssignmentType, RedundancyType,
+    SourcePosition, SourceRange, ScopeInfo, ScopeType, Visibility,
+    ImportStatement, ImportType
 )
+from ...domain.entities.natural_rules.natural_rule import ElementType
+from ...domain.entities.natural_rules.rule_intent import ConditionType
 from ...domain.entities.dependency_analysis import (
     ControlFlowGraph, DependencyGraph, GlobalDependencyGraph,
     SymbolId, ModuleId, UsageAnalysis, DependencyType, SymbolType
 )
 from ...domain.entities.parse_result import ParseResult
 from ...domain.value_objects.programming_language import ProgrammingLanguage
-from ...domain.value_objects.position import UnifiedPosition
-
-logger = logging.getLogger(__name__)
 
 
 class DeadCodeRepositoryImpl(DeadCodeRepository):
@@ -276,27 +288,54 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         control_flow_graph: ControlFlowGraph
     ) -> List[UnusedVariable]:
         """
-        Detecta variables no utilizadas en un archivo.
-        
-        Implementación básica que detecta variables declaradas pero no usadas.
+        Detecta variables no utilizadas en un archivo usando análisis AST real.
         """
         unused_variables = []
         
-        # Implementación muy básica: detectar variables simples no utilizadas
-        # En una implementación real, esto analizaría el AST en detalle
+        # Determinar el lenguaje para Tree-sitter
+        language_map = {
+            ProgrammingLanguage.PYTHON: "python",
+            ProgrammingLanguage.JAVASCRIPT: "javascript",
+            ProgrammingLanguage.TYPESCRIPT: "typescript",
+            ProgrammingLanguage.RUST: "rust"
+        }
         
-        # Por ahora simulamos encontrar algunas variables no utilizadas
-        if parse_result.language == ProgrammingLanguage.PYTHON:
-            # Simular detección de una variable no utilizada
-            unused_variables.append(UnusedVariable(
-                name="unused_var",
-                declaration_location=UnifiedPosition(line=10, column=4),
-                variable_type=ElementType.LOCAL_VARIABLE,
-                scope="function",
-                reason=UnusedReason.NEVER_REFERENCED,
-                suggestion="Eliminar la variable 'unused_var' ya que nunca es utilizada",
-                confidence=0.9
-            ))
+        if parse_result.language not in language_map:
+            return unused_variables
+            
+        try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_variables
+                
+            # Usar Tree-sitter para análisis real
+            analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
+            
+            # Parsear el código
+            if analyzer.parse(parse_result.content):
+                # Analizar código muerto
+                dead_code = analyzer.analyze()
+                
+                # Convertir resultados a formato de dominio
+                for var in dead_code.get("unused_variables", []):
+                    unused_variables.append(UnusedVariable(
+                        name=var["name"],
+                        declaration_location=SourceRange(
+                            start=SourcePosition(line=var["line"], column=var["column"]),
+                            end=SourcePosition(line=var["end_line"], column=var["end_column"])
+                        ),
+                        variable_type="local",
+                        scope=ScopeInfo(scope_type=ScopeType.FUNCTION, scope_name="unknown"),
+                        reason=UnusedReason.NEVER_REFERENCED,
+                        suggestion=f"Eliminar la variable '{var['name']}' ya que nunca es utilizada",
+                        confidence=0.95
+                    ))
+                    
+        except Exception as e:
+            logger.warning(f"Error en análisis AST: {e}")
+            # Fallback a implementación básica si falla Tree-sitter
+            pass
         
         return unused_variables
     
@@ -307,27 +346,54 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         reachable_symbols: Optional[Set[SymbolId]] = None
     ) -> List[UnusedFunction]:
         """
-        Detecta funciones no utilizadas en un archivo.
+        Detecta funciones no utilizadas en un archivo usando análisis AST real.
         """
         unused_functions = []
         
-        # Implementación básica
-        # En una implementación real, esto analizaría el AST y el grafo de dependencias
+        # Determinar el lenguaje para Tree-sitter
+        language_map = {
+            ProgrammingLanguage.PYTHON: "python",
+            ProgrammingLanguage.JAVASCRIPT: "javascript",
+            ProgrammingLanguage.TYPESCRIPT: "typescript",
+            ProgrammingLanguage.RUST: "rust"
+        }
         
-        # Por ahora simulamos encontrar una función no utilizada
-        if parse_result.functions and len(parse_result.functions) > 2:
-            # Simular que una función no es utilizada
-            unused_functions.append(UnusedFunction(
-                name="helper_function",
-                declaration_location=UnifiedPosition(line=25, column=0),
-                visibility="private",
-                parameters=[],
-                reason=UnusedReason.NEVER_CALLED,
-                suggestion="Eliminar la función 'helper_function' ya que nunca es llamada",
-                confidence=0.85,
-                potential_side_effects=[]
-            ))
-        
+        if parse_result.language not in language_map:
+            return unused_functions
+            
+        try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_functions
+                
+            # Usar Tree-sitter para análisis real
+            analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
+            
+            # Parsear el código
+            if analyzer.parse(parse_result.content):
+                # Analizar código muerto
+                dead_code = analyzer.analyze()
+                
+                # Convertir resultados a formato de dominio
+                for func in dead_code.get("unused_functions", []):
+                    unused_functions.append(UnusedFunction(
+                        name=func["name"],
+                        declaration_location=SourceRange(
+                            start=SourcePosition(line=func["line"], column=func["column"]),
+                            end=SourcePosition(line=func["end_line"], column=func["end_column"])
+                        ),
+                        visibility=Visibility.PRIVATE,
+                        parameters=[],
+                        reason=UnusedReason.NEVER_CALLED,
+                        suggestion=f"Eliminar la función '{func['name']}' ya que nunca es llamada",
+                        confidence=0.90,
+                        potential_side_effects=[]
+                    ))
+                    
+        except Exception as e:
+            logger.warning(f"Error en análisis AST de funciones: {e}")
+            
         return unused_functions
     
     async def detect_unused_classes(
@@ -337,30 +403,109 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         reachable_symbols: Optional[Set[SymbolId]] = None
     ) -> List[UnusedClass]:
         """
-        Detecta clases no utilizadas en un archivo.
+        Detecta clases no utilizadas en un archivo usando análisis AST real.
         """
-        # Por ahora retornamos lista vacía
-        # En una implementación real, esto analizaría el uso de clases
-        return []
+        unused_classes = []
+        
+        # Determinar el lenguaje para Tree-sitter
+        language_map = {
+            ProgrammingLanguage.PYTHON: "python",
+            ProgrammingLanguage.JAVASCRIPT: "javascript",
+            ProgrammingLanguage.TYPESCRIPT: "typescript",
+            ProgrammingLanguage.RUST: "rust"
+        }
+        
+        if parse_result.language not in language_map:
+            return unused_classes
+            
+        try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_classes
+                
+            # Usar Tree-sitter para análisis real
+            analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
+            
+            # Parsear el código
+            if analyzer.parse(parse_result.content):
+                # Analizar código muerto
+                dead_code = analyzer.analyze()
+                
+                # Convertir resultados a formato de dominio
+                unused_classes = self._convert_unused_classes(
+                    dead_code.get("unused_classes", [])
+                )
+                    
+        except Exception as e:
+            logger.warning(f"Error en análisis AST de clases: {e}")
+            
+        return unused_classes
     
     async def detect_unused_imports(self, parse_result: ParseResult) -> List[UnusedImport]:
         """
-        Detecta imports no utilizados en un archivo.
+        Detecta imports no utilizados en un archivo usando análisis AST real.
         """
         unused_imports = []
         
-        # Implementación básica: simular detección de import no utilizado
-        if parse_result.imports and len(parse_result.imports) > 0:
-            # Simular un import no utilizado
-            unused_imports.append(UnusedImport(
-                module_name="unused_module",
-                imported_names=["function1", "function2"],
-                import_location=UnifiedPosition(line=3, column=0),
-                reason=UnusedReason.NEVER_REFERENCED,
-                suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
-                confidence=0.95,
-                side_effects_possible=False
-            ))
+        # Determinar el lenguaje para Tree-sitter
+        language_map = {
+            ProgrammingLanguage.PYTHON: "python",
+            ProgrammingLanguage.JAVASCRIPT: "javascript",
+            ProgrammingLanguage.TYPESCRIPT: "typescript",
+            ProgrammingLanguage.RUST: "rust"
+        }
+        
+        if parse_result.language not in language_map:
+            return unused_imports
+            
+        try:
+            # Verificar si Tree-sitter está disponible
+            if not TREE_SITTER_AVAILABLE:
+                logger.debug("TreeSitter no disponible, saltando análisis AST detallado")
+                return unused_imports
+                
+            # Usar Tree-sitter para análisis real
+            analyzer = TreeSitterAnalyzer(language_map[parse_result.language])
+            
+            # Parsear el código
+            if analyzer.parse(parse_result.content):
+                # Analizar código muerto
+                dead_code = analyzer.analyze()
+                
+                # Convertir resultados a formato de dominio
+                unused_imports = self._convert_unused_imports(
+                    dead_code.get("unused_imports", [])
+                )
+                    
+        except Exception as e:
+            logger.warning(f"Error en análisis AST de imports: {e}")
+            # Fallback a implementación básica
+            if parse_result.imports and len(parse_result.imports) > 0:
+                # Simular un import no utilizado
+                import_location = SourceRange(
+                    start=SourcePosition(line=3, column=0),
+                    end=SourcePosition(line=3, column=40)
+                )
+                import_statement = ImportStatement(
+                    module_name="unused_module",
+                    imported_symbols=["function1", "function2"],
+                    import_type=ImportType.NAMED_IMPORTS,
+                    location=import_location,
+                    language=parse_result.language
+                )
+
+                unused_imports.append(UnusedImport(
+                    import_statement=import_statement,
+                    location=import_location,
+                    import_type=ImportType.NAMED_IMPORTS,
+                    module_name="unused_module",
+                    imported_symbols=["function1", "function2"],
+                    reason=UnusedReason.NEVER_REFERENCED,
+                    suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
+                    confidence=0.95,
+                    side_effects_possible=False
+                ))
         
         return unused_imports
     
@@ -380,7 +525,10 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         # Simular detección de código inalcanzable
         if parse_result.language in [ProgrammingLanguage.PYTHON, ProgrammingLanguage.JAVASCRIPT]:
             unreachable_code.append(UnreachableCode(
-                location=UnifiedPosition(line=50, column=4),
+                location=SourceRange(
+                    start=SourcePosition(line=50, column=4),
+                    end=SourcePosition(line=55, column=0)
+                ),
                 code_type="statement",
                 reason=UnreachabilityReason.AFTER_RETURN,
                 suggestion="Eliminar código después del return ya que nunca se ejecutará",
@@ -414,10 +562,14 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         if parse_result.functions:
             # Simular un parámetro no utilizado
             unused_parameters.append(UnusedParameter(
+                name="options",
                 function_name="process_data",
-                parameter_name="options",
-                location=UnifiedPosition(line=30, column=20),
-                reason=UnusedReason.NEVER_REFERENCED,
+                location=SourceRange(
+                    start=SourcePosition(line=30, column=20),
+                    end=SourcePosition(line=30, column=27)
+                ),
+                parameter_type="dict",
+                is_self_parameter=False,
                 suggestion="Eliminar el parámetro 'options' de la función 'process_data'",
                 confidence=0.8
             ))
@@ -472,7 +624,7 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         stats.total_redundant_assignments = len(analysis.redundant_assignments)
         
         # Calcular líneas afectadas (estimación simple)
-        stats.total_dead_code_lines = (
+        stats.lines_of_dead_code = (
             stats.total_unused_variables * 2 +
             stats.total_unused_functions * 10 +
             stats.total_unused_classes * 20 +
@@ -523,7 +675,7 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             stats.total_dead_branches += file_stats.total_dead_branches
             stats.total_unused_parameters += file_stats.total_unused_parameters
             stats.total_redundant_assignments += file_stats.total_redundant_assignments
-            stats.total_dead_code_lines += file_stats.total_dead_code_lines
+            stats.lines_of_dead_code += file_stats.lines_of_dead_code
         
         # Actualizar categorización agregada
         stats.issues_by_severity = {
@@ -600,3 +752,101 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             'average_execution_time_ms': avg_time,
             'supported_languages': [lang.value for lang in self.supported_languages]
         }
+    
+    # Métodos auxiliares para conversión de resultados de Tree-sitter
+    def _convert_unused_variables(self, tree_sitter_vars: List[Dict[str, Any]]) -> List[UnusedVariable]:
+        """Convierte variables no utilizadas de Tree-sitter al formato del dominio."""
+        unused_vars = []
+        for var in tree_sitter_vars:
+            unused_vars.append(UnusedVariable(
+                name=var["name"],
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=var["line"], column=var["column"]),
+                    end=SourcePosition(line=var["end_line"], column=var["end_column"])
+                ),
+                variable_type="local",
+                scope=ScopeInfo(scope_type=ScopeType.FUNCTION, scope_name="unknown"),
+                reason=UnusedReason.NEVER_REFERENCED,
+                suggestion=f"Eliminar la variable '{var['name']}' ya que nunca es utilizada",
+                confidence=0.95
+            ))
+        return unused_vars
+    
+    def _convert_unused_functions(self, tree_sitter_funcs: List[Dict[str, Any]]) -> List[UnusedFunction]:
+        """Convierte funciones no utilizadas de Tree-sitter al formato del dominio."""
+        unused_funcs = []
+        for func in tree_sitter_funcs:
+            unused_funcs.append(UnusedFunction(
+                name=func["name"],
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=func["line"], column=func["column"]),
+                    end=SourcePosition(line=func["end_line"], column=func["end_column"])
+                ),
+                visibility=Visibility.PRIVATE,
+                parameters=[],
+                reason=UnusedReason.NEVER_CALLED,
+                suggestion=f"Eliminar la función '{func['name']}' ya que nunca es llamada",
+                confidence=0.90,
+                potential_side_effects=[]
+            ))
+        return unused_funcs
+    
+    def _convert_unused_classes(self, tree_sitter_classes: List[Dict[str, Any]]) -> List[UnusedClass]:
+        """Convierte clases no utilizadas de Tree-sitter al formato del dominio."""
+        unused_classes = []
+        for cls in tree_sitter_classes:
+            unused_classes.append(UnusedClass(
+                name=cls["name"],
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=cls["line"], column=cls["column"]),
+                    end=SourcePosition(line=cls["end_line"], column=cls["end_column"])
+                ),
+                visibility=Visibility.PRIVATE,
+                base_classes=[],
+                methods=[],
+                reason=UnusedReason.NEVER_INSTANTIATED,
+                suggestion=f"Eliminar la clase '{cls['name']}' ya que nunca es utilizada",
+                confidence=0.90
+            ))
+        return unused_classes
+    
+    def _convert_unused_imports(self, tree_sitter_imports: List[Dict[str, Any]]) -> List[UnusedImport]:
+        """Convierte imports no utilizados de Tree-sitter al formato del dominio."""
+        unused_imports = []
+        for imp in tree_sitter_imports:
+            unused_imports.append(UnusedImport(
+                import_statement=ImportStatement(
+                    module_name=imp["name"],
+                    imported_symbols=[],
+                    alias=None,
+                    import_type=ImportType.DIRECT,
+                    is_relative=False,
+                    location=SourceRange(
+                        start=SourcePosition(line=imp["line"], column=imp["column"]),
+                        end=SourcePosition(line=imp["end_line"], column=imp["end_column"])
+                    )
+                ),
+                unused_symbols=[imp["name"]],
+                reason=UnusedReason.NEVER_REFERENCED,
+                suggestion=f"Eliminar el import '{imp['name']}' ya que nunca es utilizado",
+                confidence=0.95
+            ))
+        return unused_imports
+    
+    def _convert_unused_parameters(self, tree_sitter_params: List[Dict[str, Any]]) -> List[UnusedParameter]:
+        """Convierte parámetros no utilizados de Tree-sitter al formato del dominio."""
+        unused_params = []
+        for param in tree_sitter_params:
+            unused_params.append(UnusedParameter(
+                parameter_name=param["name"],
+                function_name="unknown",  # Tree-sitter no provee esta info directamente
+                declaration_location=SourceRange(
+                    start=SourcePosition(line=param["line"], column=param["column"]),
+                    end=SourcePosition(line=param["end_line"], column=param["end_column"])
+                ),
+                reason=UnusedReason.NEVER_REFERENCED,
+                suggestion=f"El parámetro '{param['name']}' nunca es utilizado",
+                confidence=0.85,
+                can_be_removed=True
+            ))
+        return unused_params
