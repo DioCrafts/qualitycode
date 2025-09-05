@@ -440,13 +440,14 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
         if parse_result.functions:
             # Simular un parámetro no utilizado
             unused_parameters.append(UnusedParameter(
+                name="options",
                 function_name="process_data",
-                parameter_name="options",
                 location=SourceRange(
                     start=SourcePosition(line=30, column=20),
                     end=SourcePosition(line=30, column=27)
                 ),
-                reason=UnusedReason.NEVER_REFERENCED,
+                parameter_type="dict",
+                is_self_parameter=False,
                 suggestion="Eliminar el parámetro 'options' de la función 'process_data'",
                 confidence=0.8
             ))
