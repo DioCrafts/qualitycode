@@ -34,11 +34,18 @@ dependencies = [
     "tree-sitter-python>=0.20.0",
     "tree-sitter-typescript>=0.20.0",
     "tree-sitter-javascript>=0.20.0",
+    "tree-sitter-rust>=0.20.0",
     "libcst>=1.1.0",
 
     # AI/ML (CPU)
     "transformers>=4.36.0",
     "sentence-transformers>=2.2.0",
+    
+    # Agente IA (opcional - para máxima precisión)
+    # Descomenta la línea que necesites:
+    # "openai>=1.0.0",  # Para usar GPT-4
+    # "anthropic>=0.7.0",  # Para usar Claude
+    # "torch>=2.0.0",  # Para modelos locales (CodeLlama, etc)
 
     # Utilities
     "structlog>=23.2.0",
