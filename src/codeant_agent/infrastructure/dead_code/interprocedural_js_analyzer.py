@@ -659,9 +659,9 @@ class InterproceduralJSAnalyzer:
         candidates = []
         
         for symbol_id, symbol in self.symbols.items():
-            if symbol.file_path == file_path and symbol.line <= line:
+            if symbol.file_path == file_path and symbol.line_number <= line:
                 if symbol.type in ['function', 'arrow_function', 'method']:
-                    candidates.append((symbol.line, symbol_id))
+                    candidates.append((symbol.line_number, symbol_id))
         
         if candidates:
             # Retornar la función más cercana

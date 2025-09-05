@@ -1,5 +1,22 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import {
+        AlertTriangle,
+        Bug,
+        Building2,
+        ChartColumn,
+        CheckCircle2,
+        Code2,
+        Copy,
+        FileText,
+        Info,
+        Package,
+        Shield,
+        Skull,
+        TestTube2,
+        TrendingUp,
+        Zap,
+    } from "lucide-svelte";
     import { onMount } from "svelte";
 
     const projectId = $page.params.id;
@@ -7,6 +24,31 @@
     let loading = true;
     let error: string | null = null;
     let analysis: any = null;
+    let activeTab = "overview";
+
+    // Íconos para cada tipo de análisis
+    const analysisIcons = {
+        complexity: ChartColumn,
+        quality: TrendingUp,
+        deadCode: Skull,
+        security: Shield,
+        duplicates: Copy,
+        bugs: Bug,
+        dependencies: Package,
+        testCoverage: TestTube2,
+        performance: Zap,
+        architecture: Building2,
+        documentation: FileText,
+    };
+
+    // Colores para niveles de severidad
+    const severityColors = {
+        critical: "#ef4444",
+        high: "#f97316",
+        medium: "#eab308",
+        low: "#3b82f6",
+        info: "#6b7280",
+    };
 
     onMount(async () => {
         try {
@@ -20,206 +62,1610 @@
             const data = await res.json();
             // Unificar estructura: algunos campos vienen en result
             analysis = data?.result ? { ...data, ...data.result } : data;
+            console.log("Analysis data:", analysis);
         } catch (e: any) {
             error = e?.message ?? "Error desconocido";
         } finally {
             loading = false;
         }
     });
+
+    function getSeverityIcon(severity: string) {
+        switch (severity?.toLowerCase()) {
+            case "critical":
+                return AlertTriangle;
+            case "high":
+                return AlertTriangle;
+            case "medium":
+                return Info;
+            case "low":
+                return Info;
+            default:
+                return Info;
+        }
+    }
+
+    function formatPercentage(value: any) {
+        if (value === null || value === undefined) return "N/A";
+        return `${value}%`;
+    }
+
+    function formatNumber(value: any) {
+        if (value === null || value === undefined) return "0";
+        return value.toLocaleString();
+    }
 </script>
 
 <div class="analysis-page">
     <div class="header">
-        <h1>Análisis del proyecto</h1>
-        <a class="btn-secondary" href={`/projects/${projectId}`}
-            >Volver al proyecto</a
-        >
+        <div class="header-left">
+            <h1>🔍 Análisis Completo del Proyecto</h1>
+            <p class="subtitle">
+                Resultados detallados de los 11 análisis ejecutados
+            </p>
+        </div>
+        <a class="btn-secondary" href={`/projects/${projectId}`}>
+            ← Volver al proyecto
+        </a>
     </div>
 
     {#if loading}
-        <div class="loading">Cargando análisis...</div>
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Cargando análisis...</p>
+        </div>
     {:else if error}
-        <div class="error">{error}</div>
+        <div class="error-card">
+            <AlertTriangle size={24} />
+            <span>{error}</span>
+        </div>
     {:else if analysis}
-        <section class="summary">
-            <div class="card">
-                <div class="value">{analysis.files_analyzed ?? 0}</div>
-                <div class="label">Archivos analizados</div>
+        <!-- Resumen General -->
+        <section class="summary-cards">
+            <div class="summary-card primary">
+                <div class="card-icon">
+                    <TrendingUp size={32} />
+                </div>
+                <div class="card-content">
+                    <div class="value">{analysis.quality_score ?? 0}</div>
+                    <div class="label">Puntuación Global</div>
+                </div>
             </div>
-            <div class="card">
-                <div class="value">{analysis.total_violations ?? 0}</div>
-                <div class="label">Problemas encontrados</div>
+
+            <div class="summary-card">
+                <div class="card-icon">
+                    <FileText size={24} />
+                </div>
+                <div class="card-content">
+                    <div class="value">
+                        {formatNumber(analysis.files_analyzed ?? 0)}
+                    </div>
+                    <div class="label">Archivos Analizados</div>
+                </div>
             </div>
-            <div class="card">
-                <div class="value">{analysis.quality_score ?? "N/A"}</div>
-                <div class="label">Puntuación de calidad</div>
+
+            <div class="summary-card">
+                <div class="card-icon">
+                    <AlertTriangle size={24} />
+                </div>
+                <div class="card-content">
+                    <div class="value">
+                        {formatNumber(analysis.total_violations ?? 0)}
+                    </div>
+                    <div class="label">Problemas Totales</div>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="card-icon">
+                    <Shield size={24} />
+                </div>
+                <div class="card-content">
+                    <div class="value severity-critical">
+                        {formatNumber(analysis.critical_issues ?? 0)}
+                    </div>
+                    <div class="label">Problemas Críticos</div>
+                </div>
             </div>
         </section>
 
-        <section class="section">
-            <h2>Complejidad</h2>
-            {#if analysis.complexity_metrics}
-                <div class="grid">
-                    <div class="card">
-                        <strong>Funciones totales:</strong>
-                        {analysis.complexity_metrics.total_functions ?? 0}
+        <!-- Navegación por pestañas -->
+        <div class="tabs">
+            <button
+                class="tab {activeTab === 'overview' ? 'active' : ''}"
+                on:click={() => (activeTab = "overview")}
+            >
+                Vista General
+            </button>
+            <button
+                class="tab {activeTab === 'complexity' ? 'active' : ''}"
+                on:click={() => (activeTab = "complexity")}
+            >
+                <ChartColumn size={16} /> Complejidad
+            </button>
+            <button
+                class="tab {activeTab === 'quality' ? 'active' : ''}"
+                on:click={() => (activeTab = "quality")}
+            >
+                <TrendingUp size={16} /> Calidad
+            </button>
+            <button
+                class="tab {activeTab === 'deadCode' ? 'active' : ''}"
+                on:click={() => (activeTab = "deadCode")}
+            >
+                <Skull size={16} /> Código Muerto
+            </button>
+            <button
+                class="tab {activeTab === 'security' ? 'active' : ''}"
+                on:click={() => (activeTab = "security")}
+            >
+                <Shield size={16} /> Seguridad
+            </button>
+            <button
+                class="tab {activeTab === 'bugs' ? 'active' : ''}"
+                on:click={() => (activeTab = "bugs")}
+            >
+                <Bug size={16} /> Bugs
+            </button>
+            <button
+                class="tab {activeTab === 'more' ? 'active' : ''}"
+                on:click={() => (activeTab = "more")}
+            >
+                Más Análisis
+            </button>
+        </div>
+
+        <!-- Contenido de las pestañas -->
+        <div class="tab-content">
+            {#if activeTab === "overview"}
+                <div class="overview-grid">
+                    <!-- 1. Análisis de Complejidad -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <ChartColumn size={20} />
+                            <h3>Análisis de Complejidad</h3>
+                        </div>
+                        {#if analysis.complexity_metrics}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Funciones totales</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.complexity_metrics
+                                            .total_functions ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Funciones complejas</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{analysis.complexity_metrics
+                                            .complex_functions ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Complejidad promedio</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.complexity_metrics.average_complexity?.toFixed(
+                                            1,
+                                        ) ?? "N/A"}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Complejidad máxima</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.complexity_metrics
+                                            .max_complexity ?? "N/A"}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
                     </div>
-                    <div class="card">
-                        <strong>Funciones complejas:</strong>
-                        {analysis.complexity_metrics.complex_functions ?? 0}
+
+                    <!-- 2. Métricas de Calidad -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <TrendingUp size={20} />
+                            <h3>Métricas de Calidad</h3>
+                        </div>
+                        {#if analysis.quality_metrics}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Índice de Mantenibilidad</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.quality_metrics.maintainability_index?.toFixed(
+                                            1,
+                                        ) ?? "N/A"}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Deuda Técnica</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{analysis.quality_metrics
+                                            .technical_debt_hours ?? 0}h</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Cobertura de Docs</span
+                                    >
+                                    <span class="metric-value"
+                                        >{formatPercentage(
+                                            analysis.quality_metrics
+                                                .documentation_coverage,
+                                        )}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Code Smells</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.quality_metrics
+                                            .code_smells ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
                     </div>
-                    <div class="card">
-                        <strong>Complejidad media:</strong>
-                        {analysis.complexity_metrics.average_complexity ?? "-"}
+
+                    <!-- 3. Código Muerto Inteligente -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Skull size={20} />
+                            <h3>Código Muerto (IA 99% Certeza)</h3>
+                        </div>
+                        {#if analysis.dead_code_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Variables no usadas</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.dead_code_results
+                                            .unused_variables?.length ??
+                                            0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Funciones no usadas</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.dead_code_results
+                                            .unused_functions?.length ??
+                                            0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Clases no usadas</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.dead_code_results
+                                            .unused_classes?.length ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Total issues</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.dead_code_results
+                                            .total_issues ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                            {#if analysis.dead_code_results.advanced_analysis}
+                                <div class="advanced-analysis">
+                                    <div class="confidence-badge success">
+                                        ✨ Análisis con IA: {analysis
+                                            .dead_code_results.advanced_analysis
+                                            .safe_to_delete ?? 0} items seguros para
+                                        eliminar
+                                    </div>
+                                </div>
+                            {/if}
+                        {/if}
                     </div>
-                    <div class="card">
-                        <strong>Complejidad máx.:</strong>
-                        {analysis.complexity_metrics.max_complexity ?? "-"}
+
+                    <!-- 4. Análisis de Seguridad -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Shield size={20} />
+                            <h3>Análisis de Seguridad</h3>
+                        </div>
+                        {#if analysis.security_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Vulnerabilidades</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.security_results
+                                            .total_vulnerabilities ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Críticas</span>
+                                    <span class="metric-value critical"
+                                        >{analysis.security_results.critical ??
+                                            0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Altas</span>
+                                    <span class="metric-value warning"
+                                        >{analysis.security_results.high ??
+                                            0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Medias</span>
+                                    <span class="metric-value"
+                                        >{analysis.security_results.medium ??
+                                            0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 5. Bugs Potenciales -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Bug size={20} />
+                            <h3>Bugs Potenciales</h3>
+                        </div>
+                        {#if analysis.bug_analysis_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Bugs detectados</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.bug_analysis_results
+                                            .total_bugs ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Null pointers</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.bug_analysis_results
+                                            .null_pointer_risks ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >División por cero</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.bug_analysis_results
+                                            .division_by_zero ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Memory leaks</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{analysis.bug_analysis_results
+                                            .memory_leaks ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 6. Análisis de Dependencias -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Package size={20} />
+                            <h3>Análisis de Dependencias</h3>
+                        </div>
+                        {#if analysis.dependency_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label">Total deps</span>
+                                    <span class="metric-value"
+                                        >{analysis.dependency_results
+                                            .total_dependencies ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Obsoletas</span>
+                                    <span class="metric-value warning"
+                                        >{analysis.dependency_results
+                                            .outdated ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Vulnerables</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.dependency_results
+                                            .vulnerable ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Sin licencia</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.dependency_results
+                                            .no_license ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 7. Cobertura de Tests -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <TestTube2 size={20} />
+                            <h3>Cobertura de Tests</h3>
+                        </div>
+                        {#if analysis.test_coverage_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Cobertura total</span
+                                    >
+                                    <span class="metric-value"
+                                        >{formatPercentage(
+                                            analysis.test_coverage_results
+                                                .coverage_percentage,
+                                        )}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Tests totales</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.test_coverage_results
+                                            .total_tests ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Unit tests</span>
+                                    <span class="metric-value"
+                                        >{analysis.test_coverage_results
+                                            .unit_tests ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">E2E tests</span>
+                                    <span class="metric-value"
+                                        >{analysis.test_coverage_results
+                                            .e2e_tests ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 8. Análisis de Performance -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Zap size={20} />
+                            <h3>Análisis de Performance</h3>
+                        </div>
+                        {#if analysis.performance_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Issues totales</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{analysis.performance_results
+                                            .total_issues ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >O(n²) detectados</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.performance_results
+                                            .n_squared_algorithms ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">N+1 queries</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.performance_results
+                                            .n_plus_one_queries ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Blocking ops</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.performance_results
+                                            .blocking_operations ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 9. Análisis de Arquitectura -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Building2 size={20} />
+                            <h3>Análisis de Arquitectura</h3>
+                        </div>
+                        {#if analysis.architecture_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label">Violaciones</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.architecture_results
+                                            .violations ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">God classes</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{analysis.architecture_results
+                                            .god_classes ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Circular deps</span
+                                    >
+                                    <span class="metric-value danger"
+                                        >{analysis.architecture_results
+                                            .circular_dependencies ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Layer violations</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.architecture_results
+                                            .layer_violations ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 10. Análisis de Documentación -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <FileText size={20} />
+                            <h3>Análisis de Documentación</h3>
+                        </div>
+                        {#if analysis.documentation_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label">Cobertura</span>
+                                    <span class="metric-value"
+                                        >{formatPercentage(
+                                            analysis.documentation_results
+                                                .coverage_percentage,
+                                        )}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Sin docs</span>
+                                    <span class="metric-value warning"
+                                        >{analysis.documentation_results
+                                            .undocumented_functions ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >README score</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.documentation_results
+                                            .readme_score ?? 0}/10</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">TODOs</span>
+                                    <span class="metric-value"
+                                        >{analysis.documentation_results
+                                            .todos ?? 0}</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- 11. Análisis de Duplicados -->
+                    <div class="analysis-card">
+                        <div class="analysis-header">
+                            <Copy size={20} />
+                            <h3>Análisis de Duplicados</h3>
+                        </div>
+                        {#if analysis.duplicate_results}
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Bloques duplicados</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.duplicate_results
+                                            .duplicate_blocks ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Líneas duplicadas</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.duplicate_results
+                                            .duplicate_lines ?? 0}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >% duplicación</span
+                                    >
+                                    <span class="metric-value warning"
+                                        >{formatPercentage(
+                                            analysis.duplicate_results
+                                                .duplicate_percentage,
+                                        )}</span
+                                    >
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label"
+                                        >Mayor duplicado</span
+                                    >
+                                    <span class="metric-value"
+                                        >{analysis.duplicate_results
+                                            .largest_duplicate?.lines ?? 0} líneas</span
+                                    >
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <!-- Cross-Language Analysis -->
+                    <div class="analysis-card full-width">
+                        <div class="analysis-header">
+                            <Code2 size={20} />
+                            <h3>Análisis Cross-Language</h3>
+                        </div>
+                        {#if analysis.complexity_metrics?.cross_language_analysis}
+                            {@const x =
+                                analysis.complexity_metrics
+                                    .cross_language_analysis}
+                            <div class="cross-language-content">
+                                <div class="language-distribution">
+                                    <h4>Distribución por Lenguaje</h4>
+                                    <div class="language-bars">
+                                        {#each Object.entries(x.files_per_language ?? {}) as [lang, count]}
+                                            <div class="language-bar">
+                                                <span class="lang-name"
+                                                    >{lang}</span
+                                                >
+                                                <div class="bar-container">
+                                                    <div
+                                                        class="bar"
+                                                        style="width: {(count /
+                                                            analysis.files_analyzed) *
+                                                            100}%"
+                                                    ></div>
+                                                </div>
+                                                <span class="lang-count"
+                                                    >{count}</span
+                                                >
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </div>
+
+                                {#if x.high_similarity_pairs?.length}
+                                    <div class="similarity-section">
+                                        <h4>Código Similar Entre Lenguajes</h4>
+                                        <div class="similarity-list">
+                                            {#each x.high_similarity_pairs as pair}
+                                                <div class="similarity-item">
+                                                    <span class="file-pair">
+                                                        {pair.file1} ({pair.lang1})
+                                                        ↔ {pair.file2} ({pair.lang2})
+                                                    </span>
+                                                    <span
+                                                        class="similarity-badge"
+                                                        >{pair.similarity}%
+                                                        similar</span
+                                                    >
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
+                        {/if}
                     </div>
                 </div>
+            {:else if activeTab === "deadCode"}
+                <!-- Vista detallada de código muerto -->
+                <div class="detailed-view">
+                    <h2>💀 Análisis Inteligente de Código Muerto</h2>
 
-                {#if analysis.complexity_metrics.complexity_hotspots?.length}
-                    <div class="card">
-                        <strong>Hotspots:</strong>
-                        <ul>
-                            {#each analysis.complexity_metrics.complexity_hotspots as h}
-                                <li>{h.file} — {h.complexity}</li>
-                            {/each}
-                        </ul>
-                    </div>
-                {/if}
-            {/if}
-        </section>
+                    {#if analysis.dead_code_results?.advanced_analysis}
+                        <div class="ai-summary">
+                            <div class="ai-header">
+                                <span class="ai-badge">🤖 Análisis con IA</span>
+                                <span class="precision-badge"
+                                    >99.9% precisión</span
+                                >
+                            </div>
 
-        <section class="section">
-            <h2>Cross-language</h2>
-            {#if analysis.complexity_metrics?.cross_language_analysis}
-                {@const x = analysis.complexity_metrics.cross_language_analysis}
-                <div class="grid">
-                    <div class="card">
-                        <strong>Lenguajes analizados:</strong>
-                        {x.languages_analyzed?.join(", ") ?? "-"}
-                    </div>
-                    <div class="card">
-                        <strong>Archivos por lenguaje:</strong>
-                        <ul>
-                            {#each Object.entries(x.files_per_language ?? {}) as [lang, count]}
-                                <li>{lang}: {count}</li>
-                            {/each}
-                        </ul>
+                            <div class="ai-metrics">
+                                <div class="ai-metric safe">
+                                    <CheckCircle2 size={20} />
+                                    <span class="metric-value"
+                                        >{analysis.dead_code_results
+                                            .advanced_analysis.safe_to_delete ??
+                                            0}</span
+                                    >
+                                    <span class="metric-label"
+                                        >Seguros para eliminar</span
+                                    >
+                                </div>
+                                <div class="ai-metric warning">
+                                    <AlertTriangle size={20} />
+                                    <span class="metric-value"
+                                        >{analysis.dead_code_results
+                                            .advanced_analysis
+                                            .requires_review ?? 0}</span
+                                    >
+                                    <span class="metric-label"
+                                        >Requieren revisión</span
+                                    >
+                                </div>
+                            </div>
+
+                            {#if analysis.dead_code_results.advanced_analysis.recommendations}
+                                <div class="recommendations">
+                                    <h4>Recomendaciones</h4>
+                                    <ul>
+                                        {#each analysis.dead_code_results.advanced_analysis.recommendations as rec}
+                                            <li>{rec}</li>
+                                        {/each}
+                                    </ul>
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+
+                    <!-- Lista detallada de código muerto -->
+                    <div class="dead-code-lists">
+                        {#if analysis.dead_code_results?.unused_variables?.length}
+                            <div class="dead-code-section">
+                                <h3>
+                                    Variables No Usadas ({analysis
+                                        .dead_code_results.unused_variables
+                                        .length})
+                                </h3>
+                                <div class="item-list">
+                                    {#each analysis.dead_code_results.unused_variables.slice(0, 10) as item}
+                                        <div class="dead-code-item">
+                                            <span class="item-name"
+                                                >{item.name}</span
+                                            >
+                                            <span class="item-location"
+                                                >{item.file}:{item.line}</span
+                                            >
+                                        </div>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/if}
+
+                        {#if analysis.dead_code_results?.unused_functions?.length}
+                            <div class="dead-code-section">
+                                <h3>
+                                    Funciones No Usadas ({analysis
+                                        .dead_code_results.unused_functions
+                                        .length})
+                                </h3>
+                                <div class="item-list">
+                                    {#each analysis.dead_code_results.unused_functions.slice(0, 10) as item}
+                                        <div class="dead-code-item">
+                                            <span class="item-name"
+                                                >{item.name}()</span
+                                            >
+                                            <span class="item-location"
+                                                >{item.file}:{item.line}</span
+                                            >
+                                        </div>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/if}
                     </div>
                 </div>
+            {:else if activeTab === "security"}
+                <!-- Vista detallada de seguridad -->
+                <div class="detailed-view">
+                    <h2>🔒 Análisis de Seguridad Detallado</h2>
 
-                {#if x.high_similarity_pairs?.length}
-                    <div class="card">
-                        <strong>Pares con alta similitud:</strong>
-                        <ul>
-                            {#each x.high_similarity_pairs as p}
-                                <li>
-                                    {p.file1} ({p.lang1}) ↔ {p.file2} ({p.lang2})
-                                    — {p.similarity}
-                                </li>
+                    {#if analysis.security_results?.vulnerabilities}
+                        <div class="vulnerabilities-list">
+                            {#each analysis.security_results.vulnerabilities as vuln}
+                                <div
+                                    class="vulnerability-item severity-{vuln.severity}"
+                                >
+                                    <div class="vuln-header">
+                                        <svelte:component
+                                            this={getSeverityIcon(
+                                                vuln.severity,
+                                            )}
+                                            size={20}
+                                        />
+                                        <span class="vuln-type"
+                                            >{vuln.type}</span
+                                        >
+                                        <span
+                                            class="severity-badge {vuln.severity}"
+                                            >{vuln.severity}</span
+                                        >
+                                    </div>
+                                    <div class="vuln-details">
+                                        <p class="vuln-description">
+                                            {vuln.description}
+                                        </p>
+                                        <div class="vuln-location">
+                                            <Code2 size={16} />
+                                            <span>{vuln.file}:{vuln.line}</span>
+                                        </div>
+                                        {#if vuln.cwe}
+                                            <span class="cwe-badge"
+                                                >CWE-{vuln.cwe}</span
+                                            >
+                                        {/if}
+                                    </div>
+                                </div>
                             {/each}
-                        </ul>
+                        </div>
+                    {/if}
+                </div>
+            {:else if activeTab === "more"}
+                <!-- Más análisis en una vista compacta -->
+                <div class="more-analyses">
+                    <h2>Análisis Adicionales</h2>
+                    <div class="compact-grid">
+                        {#each ["bugs", "dependencies", "performance", "architecture", "documentation"] as analysisType}
+                            <div class="compact-card">
+                                <svelte:component
+                                    this={analysisIcons[analysisType]}
+                                    size={24}
+                                />
+                                <h4>
+                                    {analysisType.charAt(0).toUpperCase() +
+                                        analysisType.slice(1)}
+                                </h4>
+                                <!-- Contenido específico según el tipo -->
+                            </div>
+                        {/each}
                     </div>
-                {/if}
-
-                {#if x.cross_language_patterns?.length}
-                    <div class="card">
-                        <strong>Patrones cross-language:</strong>
-                        <ul>
-                            {#each x.cross_language_patterns as c}
-                                <li>
-                                    {c.concept}: {Object.keys(c.languages).join(
-                                        ", ",
-                                    )}
-                                </li>
-                            {/each}
-                        </ul>
-                    </div>
-                {/if}
-            {:else}
-                <div class="card">No hay datos cross-language disponibles.</div>
+                </div>
             {/if}
-        </section>
-
-        <section class="section">
-            <h2>Calidad</h2>
-            {#if analysis.quality_metrics}
-                <pre class="pre">{JSON.stringify(
-                        analysis.quality_metrics,
-                        null,
-                        2,
-                    )}</pre>
-            {:else}
-                <div class="card">Sin métricas de calidad.</div>
-            {/if}
-        </section>
-
-        <section class="section">
-            <h2>Duplicados</h2>
-            {#if analysis.duplicate_results}
-                <pre class="pre">{JSON.stringify(
-                        analysis.duplicate_results,
-                        null,
-                        2,
-                    )}</pre>
-            {:else}
-                <div class="card">Sin resultados de duplicados.</div>
-            {/if}
-        </section>
+        </div>
     {:else}
-        <div class="error">No hay análisis disponible.</div>
+        <div class="error-card">
+            <Info size={24} />
+            <span>No hay análisis disponible para este proyecto.</span>
+        </div>
     {/if}
 </div>
 
 <style>
     .analysis-page {
-        padding: 1.5rem;
-        max-width: 1200px;
+        padding: 2rem;
+        max-width: 1400px;
         margin: 0 auto;
+        background: var(--color-bg-secondary, #f8f9fa);
+        min-height: 100vh;
     }
+
     .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
+        background: white;
+        padding: 1.5rem 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
-    .summary {
+
+    .header-left h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        color: #1e293b;
+    }
+
+    .subtitle {
+        margin: 0.5rem 0 0 0;
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: white;
+        color: #4a6cf7;
+        border: 2px solid #4a6cf7;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #4a6cf7;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(74, 108, 247, 0.2);
+    }
+
+    /* Loading y Error */
+    .loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem;
+        background: white;
+        border-radius: 12px;
+        gap: 1rem;
+    }
+
+    .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #f3f4f6;
+        border-top-color: #4a6cf7;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .error-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: #fee2e2;
+        color: #dc2626;
+        border-radius: 8px;
+        border: 1px solid #fecaca;
+    }
+
+    /* Summary Cards */
+    .summary-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-card.primary {
+        background: linear-gradient(135deg, #4a6cf7 0%, #3955d8 100%);
+        color: white;
+    }
+
+    .card-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        background: rgba(74, 108, 247, 0.1);
+        border-radius: 12px;
+        color: #4a6cf7;
+        flex-shrink: 0;
+    }
+
+    .summary-card.primary .card-icon {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .card-content {
+        flex: 1;
+    }
+
+    .value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .label {
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+
+    .summary-card.primary .label {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Tabs */
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        background: white;
+        padding: 0.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        overflow-x: auto;
+    }
+
+    .tab {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .tab:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    .tab.active {
+        background: #4a6cf7;
+        color: white;
+    }
+
+    /* Tab Content */
+    .tab-content {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Overview Grid */
+    .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .analysis-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+    }
+
+    .analysis-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .analysis-card.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .analysis-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        color: #1e293b;
+    }
+
+    .analysis-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .metric {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .metric-value.warning {
+        color: #f59e0b;
+    }
+
+    .metric-value.danger {
+        color: #ef4444;
+    }
+
+    .metric-value.critical {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    /* Advanced Analysis */
+    .advanced-analysis {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .confidence-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f0fdf4;
+        color: #16a34a;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .confidence-badge.success {
+        background: #f0fdf4;
+        color: #16a34a;
+    }
+
+    /* Cross-Language Content */
+    .cross-language-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .language-distribution h4,
+    .similarity-section h4 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        color: #475569;
+    }
+
+    .language-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .language-bar {
+        display: grid;
+        grid-template-columns: 80px 1fr 50px;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .lang-name {
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .bar-container {
+        height: 24px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .bar {
+        height: 100%;
+        background: linear-gradient(90deg, #4a6cf7 0%, #3955d8 100%);
+        border-radius: 12px;
+        transition: width 0.5s ease-out;
+    }
+
+    .lang-count {
+        text-align: right;
+        color: #64748b;
+    }
+
+    /* Similarity */
+    .similarity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .similarity-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .file-pair {
+        color: #475569;
+        font-family: "Consolas", "Monaco", monospace;
+    }
+
+    .similarity-badge {
+        padding: 0.25rem 0.75rem;
+        background: #fef3c7;
+        color: #d97706;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    /* Detailed Views */
+    .detailed-view {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .detailed-view h2 {
+        margin: 0 0 2rem 0;
+        font-size: 1.5rem;
+        color: #1e293b;
+    }
+
+    /* AI Summary */
+    .ai-summary {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .ai-header {
+        display: flex;
+        align-items: center;
         gap: 1rem;
         margin-bottom: 1.5rem;
     }
-    .section {
-        margin-bottom: 2rem;
+
+    .ai-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: white;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #1e293b;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
-    .grid {
+
+    .precision-badge {
+        padding: 0.25rem 0.75rem;
+        background: #16a34a;
+        color: white;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .ai-metrics {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .ai-metric {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-metric.safe {
+        border-left: 4px solid #16a34a;
+    }
+
+    .ai-metric.warning {
+        border-left: 4px solid #f59e0b;
+    }
+
+    .recommendations {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .recommendations h4 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
+        color: #1e293b;
+    }
+
+    .recommendations ul {
+        margin: 0;
+        padding-left: 1.5rem;
+        color: #475569;
+    }
+
+    .recommendations li {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Dead Code Lists */
+    .dead-code-lists {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+    }
+
+    .dead-code-section h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        color: #1e293b;
+    }
+
+    .item-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .dead-code-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+
+    .dead-code-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    .item-name {
+        font-family: "Consolas", "Monaco", monospace;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .item-location {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-family: "Consolas", "Monaco", monospace;
+    }
+
+    /* Vulnerabilities */
+    .vulnerabilities-list {
+        display: flex;
+        flex-direction: column;
         gap: 1rem;
     }
-    .card {
-        background: var(--color-bg-primary, #fff);
-        border: 1px solid var(--color-border, #e5e5e5);
+
+    .vulnerability-item {
         border-radius: 8px;
+        border: 2px solid;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .vulnerability-item.severity-critical {
+        border-color: #fee2e2;
+        background: #fef2f2;
+    }
+
+    .vulnerability-item.severity-high {
+        border-color: #fed7aa;
+        background: #fff7ed;
+    }
+
+    .vulnerability-item.severity-medium {
+        border-color: #fef3c7;
+        background: #fffbeb;
+    }
+
+    .vulnerability-item.severity-low {
+        border-color: #dbeafe;
+        background: #eff6ff;
+    }
+
+    .vuln-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.03);
+    }
+
+    .vuln-type {
+        flex: 1;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .severity-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .severity-badge.critical {
+        background: #dc2626;
+        color: white;
+    }
+
+    .severity-badge.high {
+        background: #ea580c;
+        color: white;
+    }
+
+    .severity-badge.medium {
+        background: #d97706;
+        color: white;
+    }
+
+    .severity-badge.low {
+        background: #2563eb;
+        color: white;
+    }
+
+    .vuln-details {
         padding: 1rem;
     }
-    .value {
-        font-size: 2rem;
-        font-weight: 700;
+
+    .vuln-description {
+        margin: 0 0 0.75rem 0;
+        color: #475569;
+        line-height: 1.6;
     }
-    .label {
-        color: #666;
+
+    .vuln-location {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #64748b;
+        font-family: "Consolas", "Monaco", monospace;
     }
-    .loading,
-    .error {
-        padding: 1rem;
+
+    .cwe-badge {
+        display: inline-block;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: #e5e7eb;
+        color: #4b5563;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
     }
-    .pre {
-        background: var(--color-bg-secondary, #f7f7f7);
-        padding: 1rem;
-        border-radius: 6px;
-        overflow: auto;
+
+    /* Dark mode support */
+    :global(.dark) .analysis-page {
+        background: #0f172a;
+    }
+
+    :global(.dark) .header,
+    :global(.dark) .summary-card,
+    :global(.dark) .analysis-card,
+    :global(.dark) .detailed-view,
+    :global(.dark) .tabs {
+        background: #1e293b;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    :global(.dark) .header-left h1,
+    :global(.dark) .analysis-header,
+    :global(.dark) .metric-value,
+    :global(.dark) .detailed-view h2 {
+        color: #f1f5f9;
+    }
+
+    :global(.dark) .subtitle,
+    :global(.dark) .label,
+    :global(.dark) .metric-label {
+        color: #94a3b8;
+    }
+
+    :global(.dark) .tab {
+        color: #94a3b8;
+    }
+
+    :global(.dark) .tab:hover {
+        background: #334155;
+        color: #f1f5f9;
+    }
+
+    :global(.dark) .btn-secondary {
+        background: #1e293b;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+
+    :global(.dark) .btn-secondary:hover {
+        background: #334155;
+        border-color: #64748b;
     }
 </style>

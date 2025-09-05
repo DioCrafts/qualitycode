@@ -525,7 +525,7 @@ class InterproceduralRustAnalyzer:
             
             # Buscar el trait en los símbolos
             for symbol_id, symbol in self.symbols.items():
-                if symbol.kind == 'trait' and symbol.name == trait_name:
+                if symbol.type == 'class' and symbol.name == trait_name:  # 'class' se usa para traits en nuestro modelo
                     trait_id = symbol_id
                     break
             
@@ -589,13 +589,13 @@ class InterproceduralRustAnalyzer:
         
         # Marcar módulos de test
         for symbol_id, symbol in self.symbols.items():
-            if symbol.kind == 'mod' and symbol.name in ['tests', 'test']:
+            if symbol.type == 'module' and symbol.name in ['tests', 'test']:  # Usar 'module' para módulos
                 # Todas las funciones dentro de módulos de test son tests
                 file_path = symbol.file_path
                 for other_id, other_symbol in self.symbols.items():
                     if (other_symbol.file_path == file_path and 
-                        other_symbol.kind == 'fn' and
-                        other_symbol.line > symbol.line):
+                        other_symbol.type == 'function' and
+                        other_symbol.line_number > symbol.line_number):
                         self.test_functions.add(other_id)
                         self.indirect_uses[other_id].add('test_function_in_test_module')
     
@@ -681,16 +681,25 @@ class InterproceduralRustAnalyzer:
         # Funciones públicas en libraries
         if hasattr(self, 'crate_type') and self.crate_type == 'library':
             for symbol_id, symbol in self.symbols.items():
-                if symbol.visibility.startswith('pub') and symbol.kind in ['fn', 'struct', 'enum', 'trait']:
+                # Verificar si es público basándose en los decoradores o el nombre
+                if hasattr(symbol, 'decorators'):
+                    is_public = any('pub' in dec for dec in symbol.decorators)
+                else:
+                    # En Rust, asumimos que es público si el nombre empieza con mayúscula o tiene ciertos patrones
+                    is_public = symbol.name[0].isupper() if symbol.name else False
+                    
+                # Verificar el tipo del símbolo
+                if is_public and symbol.type in ['function', 'class']:
                     entry_points.add(symbol_id)
                     self.indirect_uses[symbol_id].add('public_api')
         
-        # Funciones con atributos especiales
+        # Funciones con atributos especiales (usando decorators en lugar de attributes)
         for symbol_id, symbol in self.symbols.items():
-            for attr in symbol.attributes:
-                if any(entry_attr in attr for entry_attr in ['export', 'no_mangle', 'extern']):
-                    entry_points.add(symbol_id)
-                    self.indirect_uses[symbol_id].add(f'exported_symbol_{attr}')
+            if hasattr(symbol, 'decorators'):
+                for decorator in symbol.decorators:
+                    if any(entry_attr in decorator for entry_attr in ['export', 'no_mangle', 'extern']):
+                        entry_points.add(symbol_id)
+                        self.indirect_uses[symbol_id].add(f'exported_symbol_{decorator}')
         
         return entry_points
     
@@ -768,9 +777,9 @@ class InterproceduralRustAnalyzer:
         
         for symbol_id, symbol in self.symbols.items():
             if (symbol.file_path == file_path and 
-                symbol.kind in ['fn', 'method'] and 
-                symbol.line <= line):
-                candidates.append((symbol.line, symbol_id))
+                symbol.type == 'function' and 
+                symbol.line_number <= line):
+                candidates.append((symbol.line_number, symbol_id))
         
         if candidates:
             candidates.sort(reverse=True)

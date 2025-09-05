@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copiar package files del dashboard
 COPY dashboard/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copiar código del dashboard
 COPY dashboard/ ./

@@ -197,40 +197,138 @@
 
             {#if analysisResults && !analysisInProgress}
                 <div class="details-section">
-                    <h2>Resultados del análisis</h2>
+                    <h2>📊 Resultados del Análisis Completo</h2>
                     <div class="analysis-results">
                         <div class="metrics-summary">
-                            <div class="metric-card">
+                            <div class="metric-card primary">
+                                <div class="metric-icon">📈</div>
                                 <div class="metric-value">
-                                    {analysisResults.total_violations || 0}
+                                    {analysisResults.quality_score || 0}
                                 </div>
                                 <div class="metric-label">
-                                    Problemas encontrados
+                                    Puntuación Global
                                 </div>
                             </div>
                             <div class="metric-card">
-                                <div class="metric-value">
-                                    {analysisResults.quality_score || "N/A"}
-                                </div>
-                                <div class="metric-label">
-                                    Puntuación de calidad
-                                </div>
-                            </div>
-                            <div class="metric-card">
+                                <div class="metric-icon">📁</div>
                                 <div class="metric-value">
                                     {analysisResults.files_analyzed || 0}
                                 </div>
                                 <div class="metric-label">
-                                    Archivos analizados
+                                    Archivos Analizados
                                 </div>
+                            </div>
+                            <div class="metric-card warning">
+                                <div class="metric-icon">⚠️</div>
+                                <div class="metric-value">
+                                    {analysisResults.total_violations || 0}
+                                </div>
+                                <div class="metric-label">
+                                    Problemas Encontrados
+                                </div>
+                            </div>
+                            <div class="metric-card danger">
+                                <div class="metric-icon">🚨</div>
+                                <div class="metric-value">
+                                    {analysisResults.critical_issues || 0}
+                                </div>
+                                <div class="metric-label">Críticos</div>
                             </div>
                         </div>
 
+                        <!-- Mini resumen de cada análisis -->
+                        <div class="analysis-grid">
+                            <div class="analysis-item">
+                                <span class="analysis-icon">🔧</span>
+                                <span class="analysis-name">Complejidad</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.complexity_metrics
+                                        ?.total_functions || 0} funciones</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">💀</span>
+                                <span class="analysis-name">Código Muerto</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.dead_code_results
+                                        ?.total_issues || 0} issues</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">🔒</span>
+                                <span class="analysis-name">Seguridad</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.security_results
+                                        ?.total_vulnerabilities || 0} vulns</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">🐛</span>
+                                <span class="analysis-name">Bugs</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.bug_analysis_results
+                                        ?.total_bugs || 0} detectados</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">📦</span>
+                                <span class="analysis-name">Dependencias</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.dependency_results
+                                        ?.total_dependencies || 0} deps</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">🧪</span>
+                                <span class="analysis-name">Tests</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.test_coverage_results
+                                        ?.coverage_percentage || 0}%</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">⚡</span>
+                                <span class="analysis-name">Performance</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.performance_results
+                                        ?.total_issues || 0} issues</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">🏗️</span>
+                                <span class="analysis-name">Arquitectura</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.architecture_results
+                                        ?.violations || 0} violaciones</span
+                                >
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-icon">📝</span>
+                                <span class="analysis-name">Documentación</span>
+                                <span class="analysis-value"
+                                    >{analysisResults.documentation_results
+                                        ?.coverage_percentage || 0}%</span
+                                >
+                            </div>
+                        </div>
+
+                        {#if analysisResults.dead_code_results?.advanced_analysis}
+                            <div class="ai-highlight">
+                                <span class="ai-badge">🤖 IA</span>
+                                <span
+                                    >Análisis inteligente detectó {analysisResults
+                                        .dead_code_results.advanced_analysis
+                                        .safe_to_delete || 0} items seguros para
+                                    eliminar con 99% certeza</span
+                                >
+                            </div>
+                        {/if}
+
                         <a
                             href={`/analysis/${projectId}`}
-                            class="btn-secondary view-details-btn"
+                            class="btn-primary view-details-btn"
                         >
-                            Ver análisis completo
+                            Ver análisis detallado →
                         </a>
                     </div>
                 </div>
@@ -407,20 +505,127 @@
 
     .metric-card {
         background-color: var(--color-bg-secondary, #f5f5f5);
-        padding: 1rem;
-        border-radius: 8px;
+        padding: 1.5rem;
+        border-radius: 12px;
         text-align: center;
+        transition:
+            transform 0.2s,
+            box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-card.primary {
+        background: linear-gradient(135deg, #4a6cf7 0%, #3955d8 100%);
+        color: white;
+    }
+
+    .metric-card.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .metric-card.danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .metric-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
     }
 
     .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
+        font-size: 2.5rem;
+        font-weight: 700;
         margin-bottom: 0.5rem;
+        line-height: 1;
     }
 
     .metric-label {
         color: #666;
         font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .metric-card.primary .metric-label,
+    .metric-card.warning .metric-label,
+    .metric-card.danger .metric-label {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Analysis Grid */
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: var(--color-bg-secondary, #f8f9fa);
+        border-radius: 12px;
+    }
+
+    .analysis-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .analysis-item:hover {
+        border-color: #4a6cf7;
+        box-shadow: 0 4px 12px rgba(74, 108, 247, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .analysis-icon {
+        font-size: 1.5rem;
+    }
+
+    .analysis-name {
+        flex: 1;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .analysis-value {
+        font-weight: 500;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    /* AI Highlight */
+    .ai-highlight {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border: 2px solid #86efac;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        font-weight: 500;
+        color: #16a34a;
+    }
+
+    .ai-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: white;
+        border-radius: 6px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .empty-analysis {
