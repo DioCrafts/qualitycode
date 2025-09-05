@@ -9,6 +9,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import networkx as nx
 import json
+import os
 
 from .intelligent_dead_code_analyzer import IntelligentDeadCodeAnalyzer
 from .interprocedural_py_analyzer import InterproceduralAnalyzer
