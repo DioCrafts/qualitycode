@@ -4,7 +4,7 @@ Motor avanzado de detección de código muerto con múltiples estrategias.
 
 import asyncio
 import logging
-from typing import Dict, List, Any, Set, Optional
+from typing import Dict, List, Any, Set, Optional, Tuple
 from pathlib import Path
 from dataclasses import dataclass
 import networkx as nx
