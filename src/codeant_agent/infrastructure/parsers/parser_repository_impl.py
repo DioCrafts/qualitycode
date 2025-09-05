@@ -277,13 +277,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[0].replace('def ', '').strip()
                         functions.append(FunctionInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 10,  # Estimación
-                            parameters=[],
-                            return_type=None,
-                            is_async='async ' in line,
-                            decorators=[],
-                            complexity=5  # Estimación
+                            line=i + 1,
+                            params=[]
                         ))
             
             elif language in [ProgrammingLanguage.JAVASCRIPT, ProgrammingLanguage.TYPESCRIPT]:
@@ -296,13 +291,8 @@ class ParserRepositoryImpl(ParserRepository):
                             if name_part:
                                 functions.append(FunctionInfo(
                                     name=name_part,
-                                    start_line=i + 1,
-                                    end_line=i + 10,
-                                    parameters=[],
-                                    return_type=None,
-                                    is_async='async ' in line,
-                                    decorators=[],
-                                    complexity=5
+                                    line=i + 1,
+                                    params=[]
                                 ))
             
             elif language == ProgrammingLanguage.RUST:
@@ -312,13 +302,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[0].replace('fn ', '').strip()
                         functions.append(FunctionInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 10,
-                            parameters=[],
-                            return_type=None,
-                            is_async='async ' in line,
-                            decorators=[],
-                            complexity=5
+                            line=i + 1,
+                            params=[]
                         ))
         
         return functions
@@ -336,13 +321,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = name_part.split('(')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,  # Estimación
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract=False
+                            line=i + 1,
+                            methods=[]
                         ))
             
             elif language in [ProgrammingLanguage.JAVASCRIPT, ProgrammingLanguage.TYPESCRIPT]:
@@ -352,13 +332,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[1].split('{')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract='abstract' in line
+                            line=i + 1,
+                            methods=[]
                         ))
             
             elif language == ProgrammingLanguage.RUST:
@@ -368,13 +343,8 @@ class ParserRepositoryImpl(ParserRepository):
                         name = parts[1].split('{')[0].strip()
                         classes.append(ClassInfo(
                             name=name,
-                            start_line=i + 1,
-                            end_line=i + 20,
-                            methods=[],
-                            attributes=[],
-                            base_classes=[],
-                            decorators=[],
-                            is_abstract=False
+                            line=i + 1,
+                            methods=[]
                         ))
         
         return classes
