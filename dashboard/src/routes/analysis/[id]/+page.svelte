@@ -779,9 +779,7 @@
                                                 <div class="bar-container">
                                                     <div
                                                         class="bar"
-                                                        style="width: {(Number(
-                                                            count,
-                                                        ) /
+                                                        style="width: {((count as number) /
                                                             analysis.files_analyzed) *
                                                             100}%"
                                                     ></div>
