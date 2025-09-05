@@ -1185,13 +1185,66 @@
                                     <h4>Recomendaciones</h4>
                                     <ul>
                                         {#each analysis.dead_code_results.advanced_analysis.recommendations as rec}
-                                            <li>
+                                            <li class="recommendation-item">
                                                 {#if typeof rec === "string"}
                                                     {rec}
-                                                {:else if rec && rec.text}
-                                                    {rec.text}
-                                                {:else if rec && rec.message}
-                                                    {rec.message}
+                                                {:else if rec && typeof rec === "object"}
+                                                    <div
+                                                        class="recommendation-content"
+                                                    >
+                                                        <strong
+                                                            class="recommendation-action"
+                                                            >{rec.action ||
+                                                                "Acción"}</strong
+                                                        >:
+                                                        <span
+                                                            class="recommendation-desc"
+                                                            >{rec.description ||
+                                                                "Sin descripción"}</span
+                                                        >
+                                                        {#if rec.impact}
+                                                            <div
+                                                                class="recommendation-impact"
+                                                            >
+                                                                <small
+                                                                    >Impacto: {rec.impact}</small
+                                                                >
+                                                            </div>
+                                                        {/if}
+                                                        {#if rec.items && rec.items.length > 0}
+                                                            <div
+                                                                class="recommendation-items"
+                                                            >
+                                                                <small
+                                                                    >Items
+                                                                    afectados:</small
+                                                                >
+                                                                <ul
+                                                                    class="affected-items"
+                                                                >
+                                                                    {#each rec.items.slice(0, 5) as item}
+                                                                        <li>
+                                                                            <code
+                                                                                >{item}</code
+                                                                            >
+                                                                        </li>
+                                                                    {/each}
+                                                                    {#if rec.items.length > 5}
+                                                                        <li>
+                                                                            <em
+                                                                                >...y
+                                                                                {rec
+                                                                                    .items
+                                                                                    .length -
+                                                                                    5}
+                                                                                más</em
+                                                                            >
+                                                                        </li>
+                                                                    {/if}
+                                                                </ul>
+                                                            </div>
+                                                        {/if}
+                                                    </div>
                                                 {:else}
                                                     {JSON.stringify(rec)}
                                                 {/if}
@@ -2904,12 +2957,65 @@ def duplicated_logic():
 
     .recommendations ul {
         margin: 0;
-        padding-left: 1.5rem;
+        padding-left: 0;
         color: #475569;
+        list-style: none;
     }
 
     .recommendations li {
         margin-bottom: 0.5rem;
+    }
+
+    .recommendation-item {
+        margin-bottom: 16px;
+        padding: 12px;
+        background-color: rgba(59, 130, 246, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+    }
+
+    .recommendation-content {
+        width: 100%;
+    }
+
+    .recommendation-action {
+        color: #3b82f6;
+        font-weight: 600;
+    }
+
+    .recommendation-desc {
+        color: #4b5563;
+    }
+
+    .recommendation-impact {
+        margin-top: 4px;
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .recommendation-items {
+        margin-top: 8px;
+        padding-left: 16px;
+    }
+
+    .affected-items {
+        list-style: none;
+        padding: 0;
+        margin: 4px 0 0 0;
+    }
+
+    .affected-items li {
+        padding: 2px 0;
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .affected-items code {
+        background-color: rgba(0, 0, 0, 0.05);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-family: "JetBrains Mono", monospace;
     }
 
     /* Dead Code Lists */
