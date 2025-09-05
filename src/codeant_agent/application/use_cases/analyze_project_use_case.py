@@ -708,59 +708,30 @@ class AnalyzeProjectUseCase:
             raise
     
     async def _analyze_security(self, project_path: str, results: AnalysisResults):
-        """Analizar seguridad básica del código."""
+        """Analizar seguridad del código usando SecurityAnalyzer."""
         try:
-            logger.info("Ejecutando análisis de seguridad básico...")
-            
-            # Análisis básico de seguridad
-            import os
-            security_issues = {
-                "hardcoded_secrets": 0,
-                "sql_injections": 0,
-                "unsafe_functions": 0
-            }
-            
-            unsafe_patterns = [
-                'eval(', 'exec(', '__import__',  # Python
-                'eval(', 'Function(', 'innerHTML',  # JavaScript
-                'unsafe {', 'mem::transmute',  # Rust
-            ]
-            
-            for root, dirs, files in os.walk(project_path):
-                for file in files:
-                    if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.rs')):
-                        file_path = os.path.join(root, file)
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                                # Buscar patrones inseguros
-                                for pattern in unsafe_patterns:
-                                    if pattern in content:
-                                        security_issues["unsafe_functions"] += content.count(pattern)
-                                
-                                # Buscar posibles secretos
-                                if 'password=' in content or 'api_key=' in content or 'secret=' in content:
-                                    security_issues["hardcoded_secrets"] += 1
-                        except:
-                            pass
-            
-            # Generar resultados
-            results.security_results = {
-                "vulnerabilities": {
-                    "critical": security_issues["hardcoded_secrets"],
-                    "high": security_issues["unsafe_functions"],
-                    "medium": 0,
-                    "low": 0
-                },
-                "security_hotspots": sum(security_issues.values()),
-                "owasp_compliance": 90.0 if sum(security_issues.values()) == 0 else 70.0,
-                "cve_matches": 0
-            }
-            
-            results.critical_violations += security_issues["hardcoded_secrets"]
-            results.high_violations += security_issues["unsafe_functions"]
-            results.total_violations += sum(security_issues.values())
-            
+            logger.info("Ejecutando análisis de seguridad con SecurityAnalyzer...")
+
+            # Usar el SecurityAnalyzer inyectado
+            if self.security_analyzer:
+                security_results = self.security_analyzer.analyze_project(project_path)
+
+                # Actualizar los resultados del análisis
+                results.security_results = security_results
+
+                # Actualizar contadores de violaciones
+                vulnerabilities = security_results.get("vulnerabilities", {})
+                results.critical_violations += vulnerabilities.get("CRITICAL", 0)
+                results.high_violations += vulnerabilities.get("HIGH", 0)
+                results.medium_violations += vulnerabilities.get("MEDIUM", 0)
+                results.low_violations += vulnerabilities.get("LOW", 0)
+                results.total_violations += security_results.get("security_hotspots", 0)
+
+                logger.info(f"Análisis de seguridad completado: {security_results.get('security_hotspots', 0)} vulnerabilidades encontradas")
+            else:
+                logger.warning("No se proporcionó SecurityAnalyzer, saltando análisis de seguridad")
+                results.errors.append("SecurityAnalyzer no disponible")
+
         except Exception as e:
             logger.error(f"Error en análisis de seguridad: {str(e)}")
             results.errors.append(f"Error en análisis de seguridad: {str(e)}")

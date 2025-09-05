@@ -454,30 +454,30 @@ class DeadCodeRepositoryImpl(DeadCodeRepository):
             logger.warning(f"Error en análisis AST de imports: {e}")
             # Fallback a implementación básica
             if parse_result.imports and len(parse_result.imports) > 0:
-            # Simular un import no utilizado
-            import_location = SourceRange(
-                start=SourcePosition(line=3, column=0),
-                end=SourcePosition(line=3, column=40)
-            )
-            import_statement = ImportStatement(
-                module_name="unused_module",
-                imported_symbols=["function1", "function2"],
-                import_type=ImportType.NAMED_IMPORTS,
-                location=import_location,
-                language=parse_result.language
-            )
-            
-            unused_imports.append(UnusedImport(
-                import_statement=import_statement,
-                location=import_location,
-                import_type=ImportType.NAMED_IMPORTS,
-                module_name="unused_module",
-                imported_symbols=["function1", "function2"],
-                reason=UnusedReason.NEVER_REFERENCED,
-                suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
-                confidence=0.95,
-                side_effects_possible=False
-            ))
+                # Simular un import no utilizado
+                import_location = SourceRange(
+                    start=SourcePosition(line=3, column=0),
+                    end=SourcePosition(line=3, column=40)
+                )
+                import_statement = ImportStatement(
+                    module_name="unused_module",
+                    imported_symbols=["function1", "function2"],
+                    import_type=ImportType.NAMED_IMPORTS,
+                    location=import_location,
+                    language=parse_result.language
+                )
+
+                unused_imports.append(UnusedImport(
+                    import_statement=import_statement,
+                    location=import_location,
+                    import_type=ImportType.NAMED_IMPORTS,
+                    module_name="unused_module",
+                    imported_symbols=["function1", "function2"],
+                    reason=UnusedReason.NEVER_REFERENCED,
+                    suggestion="Eliminar el import 'unused_module' ya que no se utiliza",
+                    confidence=0.95,
+                    side_effects_possible=False
+                ))
         
         return unused_imports
     
