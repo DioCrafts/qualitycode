@@ -11,6 +11,9 @@ import networkx as nx
 import json
 
 from .intelligent_dead_code_analyzer import IntelligentDeadCodeAnalyzer
+from .interprocedural_py_analyzer import InterproceduralAnalyzer
+from .interprocedural_js_analyzer import InterproceduralJSAnalyzer
+from .interprocedural_rust_analyzer import InterproceduralRustAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,7 @@ class AdvancedDeadCodeEngine:
     def __init__(self, project_path: str):
         self.project_path = Path(project_path)
         self.intelligent_analyzer = IntelligentDeadCodeAnalyzer(project_path)
+        self.interprocedural_analyzer = InterproceduralAnalyzer(project_path)
         self.dependency_graph = nx.DiGraph()
         self.results: List[DeadCodeResult] = []
         
@@ -90,10 +94,53 @@ class AdvancedDeadCodeEngine:
         # Ejecutar análisis inteligente base
         base_results = self.intelligent_analyzer.analyze_project()
         
+        # Detectar lenguajes en el proyecto
+        languages = self._detect_languages()
+        logger.info(f"Lenguajes detectados: {languages}")
+        
+        # Ejecutar análisis interprocedural según los lenguajes detectados
+        all_interprocedural_results = {}
+        
+        if 'python' in languages:
+            logger.info("Ejecutando análisis interprocedural para Python...")
+            python_results = self.interprocedural_analyzer.analyze()
+            all_interprocedural_results['python'] = python_results
+        
+        if 'javascript' in languages or 'typescript' in languages:
+            logger.info("Ejecutando análisis interprocedural para JavaScript/TypeScript...")
+            js_analyzer = InterproceduralJSAnalyzer(str(self.project_path))
+            js_results = js_analyzer.analyze()
+            all_interprocedural_results['javascript'] = js_results
+        
+        if 'rust' in languages:
+            logger.info("Ejecutando análisis interprocedural para Rust...")
+            rust_analyzer = InterproceduralRustAnalyzer(str(self.project_path))
+            rust_results = rust_analyzer.analyze()
+            all_interprocedural_results['rust'] = rust_results
+        
+        # Combinar resultados de todos los lenguajes
+        combined_reachable = set()
+        combined_indirect_uses = {}
+        
+        for lang, results in all_interprocedural_results.items():
+            combined_reachable.update(results.get('reachable_symbols', set()))
+            combined_indirect_uses.update(results.get('indirect_uses', {}))
+        
+        # Usar los resultados combinados
+        reachable_from_interprocedural = combined_reachable
+        indirect_uses = combined_indirect_uses
+        
+        # Actualizar confianza basado en análisis interprocedural
+        self._update_confidence_with_interprocedural(base_results, {
+            'reachable_symbols': reachable_from_interprocedural,
+            'indirect_uses': indirect_uses,
+            'all_results': all_interprocedural_results
+        })
+        
         # Construir grafo de dependencias completo
         await self._build_complete_dependency_graph()
         
-        # Análisis de flujo de datos
+        # Análisis de flujo de datos (complementario al interprocedural)
         await self._analyze_data_flow()
         
         # Detección de patrones especiales
@@ -243,8 +290,90 @@ class AdvancedDeadCodeEngine:
         for symbol_id, symbol in self.intelligent_analyzer.symbols.items():
             for pattern, confidence_modifier in semantic_hints.items():
                 if pattern in symbol.name.lower():
-                    symbol.confidence_score = min(1.0, 
-                        symbol.confidence_score * confidence_modifier)
+                                    symbol.confidence_score = min(1.0, 
+                    symbol.confidence_score * confidence_modifier)
+    
+    def _update_confidence_with_interprocedural(self, base_results: Dict[str, Any], 
+                                               interprocedural_results: Dict[str, Any]):
+        """Actualizar confianza basado en análisis interprocedural."""
+        reachable_symbols = interprocedural_results.get('reachable_symbols', set())
+        indirect_uses = interprocedural_results.get('indirect_uses', {})
+        callback_registry = interprocedural_results.get('callback_registry', {})
+        injection_points = interprocedural_results.get('injection_points', {})
+        
+        # Actualizar confianza en los símbolos del análisis base
+        for symbol_id, symbol in self.intelligent_analyzer.symbols.items():
+            # Si el símbolo es alcanzable por análisis interprocedural
+            if symbol_id in reachable_symbols:
+                # Reducir drásticamente la confianza de que sea código muerto
+                symbol.confidence_score *= 0.1  # 90% menos probable que sea dead code
+                symbol.usage_contexts.add('interprocedural_reachable')
+            
+            # Si tiene usos indirectos
+            if symbol_id in indirect_uses:
+                uses = indirect_uses[symbol_id]
+                # Cada uso indirecto reduce la confianza
+                reduction_factor = 0.2 ** len(uses)  # Más usos = menos probable dead code
+                symbol.confidence_score *= reduction_factor
+                
+                # Agregar contextos de uso
+                for use in uses:
+                    symbol.usage_contexts.add(f'indirect_{use}')
+                
+                logger.debug(f"{symbol_id} tiene usos indirectos: {uses}")
+            
+            # Si es un callback registrado
+            for callback_type, callbacks in callback_registry.items():
+                if symbol_id in callbacks:
+                    symbol.confidence_score *= 0.05  # 95% menos probable
+                    symbol.usage_contexts.add(f'callback_{callback_type}')
+            
+            # Si es un punto de inyección
+            for injection_type, points in injection_points.items():
+                if symbol_id in points:
+                                                symbol.confidence_score = 0.0  # Definitivamente NO es código muerto
+                    symbol.usage_contexts.add(f'injection_{injection_type}')
+                    symbol.is_entry_point = True
+    
+    def _detect_languages(self) -> Set[str]:
+        """Detectar qué lenguajes de programación están presentes en el proyecto."""
+        languages = set()
+        
+        # Mapeo de extensiones a lenguajes
+        extension_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.jsx': 'javascript',
+            '.ts': 'typescript',
+            '.tsx': 'typescript',
+            '.rs': 'rust',
+            '.java': 'java',
+            '.go': 'go',
+            '.rb': 'ruby',
+            '.php': 'php',
+            '.cs': 'csharp',
+            '.cpp': 'cpp',
+            '.c': 'c',
+            '.h': 'c',
+            '.hpp': 'cpp'
+        }
+        
+        # Buscar archivos por extensión
+        for ext, lang in extension_map.items():
+            if list(self.project_path.rglob(f'*{ext}')):
+                languages.add(lang)
+        
+        # Detectar por archivos específicos
+        if (self.project_path / 'package.json').exists():
+            languages.add('javascript')
+        if (self.project_path / 'tsconfig.json').exists():
+            languages.add('typescript')
+        if (self.project_path / 'Cargo.toml').exists():
+            languages.add('rust')
+        if (self.project_path / 'requirements.txt').exists() or (self.project_path / 'pyproject.toml').exists():
+            languages.add('python')
+        
+        return languages
     
     async def _consolidate_results(self, base_results: Dict[str, Any]) -> List[DeadCodeResult]:
         """Consolidar todos los resultados en formato unificado."""
