@@ -36,6 +36,14 @@
     let analysis: any = null;
     let activeTab = "overview";
 
+    // Estado para el modal de archivo
+    let showFileModal = false;
+    let selectedFileContent = "";
+    let selectedFileName = "";
+    let selectedFileLine = 0;
+    let fileLoading = false;
+    let fileError = false;
+
     // Íconos para cada tipo de análisis
     const analysisIcons = {
         complexity: ChartColumn,
@@ -121,6 +129,61 @@
     function formatNumber(value: any) {
         if (value === null || value === undefined) return "0";
         return value.toLocaleString();
+    }
+
+    // Función para mostrar el archivo
+    async function viewFile(filePath: string, lineNumber: number) {
+        try {
+            // Mostrar loading
+            selectedFileName = filePath.split("/").pop() || filePath;
+            selectedFileLine = lineNumber;
+            selectedFileContent = "";
+            fileLoading = true;
+            fileError = false;
+            showFileModal = true;
+
+            // Hacer llamada al backend para obtener el contenido real
+            const response = await fetch(
+                `/api/projects/${projectId}/file-content?file_path=${encodeURIComponent(filePath)}&line_number=${lineNumber}`,
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Error ${response.status}: ${response.statusText}`,
+                );
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                selectedFileContent = data.content;
+                selectedFileName = data.file_name;
+                selectedFileLine = data.line_number;
+                fileError = false;
+            } else {
+                throw new Error(
+                    data.error || "Error desconocido al cargar el archivo",
+                );
+            }
+        } catch (error) {
+            console.error("Error al cargar el archivo:", error);
+            const errorMessage =
+                error instanceof Error ? error.message : String(error);
+            selectedFileContent = `Error al cargar el archivo: ${errorMessage}`;
+            fileError = true;
+        } finally {
+            fileLoading = false;
+        }
+    }
+
+    // Función para cerrar el modal
+    function closeFileModal() {
+        showFileModal = false;
+        selectedFileContent = "";
+        selectedFileName = "";
+        selectedFileLine = 0;
+        fileLoading = false;
+        fileError = false;
     }
 </script>
 
@@ -1598,6 +1661,11 @@
                                                 <button
                                                     class="action-btn view"
                                                     title="Ver en contexto"
+                                                    on:click={() =>
+                                                        viewFile(
+                                                            item.file,
+                                                            item.line,
+                                                        )}
                                                 >
                                                     <Eye size={18} />
                                                     <span>Ver archivo</span>
@@ -2415,6 +2483,56 @@ def duplicated_logic():
         </div>
     {/if}
 </div>
+
+<!-- Modal para mostrar archivo -->
+{#if showFileModal}
+    <div
+        class="modal-overlay"
+        on:click={closeFileModal}
+        on:keydown={(e) => e.key === "Escape" && closeFileModal()}
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+    >
+        <div
+            class="modal-content"
+            on:click|stopPropagation
+            role="document"
+            tabindex="-1"
+        >
+            <div class="modal-header">
+                <h3>📄 {selectedFileName}</h3>
+                <button class="close-btn" on:click={closeFileModal}>×</button>
+            </div>
+            <div class="modal-body">
+                <div class="file-info">
+                    <span class="file-path">📁 {selectedFileName}</span>
+                    <span class="line-info">📍 Línea {selectedFileLine}</span>
+                </div>
+                <div class="code-container">
+                    {#if fileLoading}
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>Cargando contenido del archivo...</p>
+                        </div>
+                    {:else if fileError}
+                        <div class="error-container">
+                            <div class="error-icon">⚠️</div>
+                            <p class="error-message">{selectedFileContent}</p>
+                        </div>
+                    {:else}
+                        <pre><code>{selectedFileContent}</code></pre>
+                    {/if}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" on:click={closeFileModal}
+                    >Cerrar</button
+                >
+            </div>
+        </div>
+    </div>
+{/if}
 
 <style>
     .analysis-page {
@@ -3336,6 +3454,197 @@ def duplicated_logic():
 
     .action-btn.review:hover {
         background-color: #fde68a;
+    }
+
+    /* Estilos del modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        box-shadow:
+            0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 800px;
+        width: 100%;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 24px;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.875rem;
+    }
+
+    .file-path {
+        color: #6b7280;
+        font-family: monospace;
+    }
+
+    .line-info {
+        color: #059669;
+        font-weight: 500;
+    }
+
+    .code-container {
+        flex: 1;
+        overflow: auto;
+        padding: 24px;
+    }
+
+    .code-container pre {
+        margin: 0;
+        background-color: #1f2937;
+        color: #f9fafb;
+        padding: 20px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .code-container code {
+        background: none;
+        padding: 0;
+        color: inherit;
+    }
+
+    .modal-footer {
+        padding: 20px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background-color: #4b5563;
+    }
+
+    /* Estilos para loading y error en el modal */
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-container p {
+        color: #6b7280;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    .error-message {
+        color: #dc2626;
+        font-size: 14px;
+        margin: 0;
+        background-color: #fef2f2;
+        padding: 12px 16px;
+        border-radius: 6px;
+        border: 1px solid #fecaca;
     }
 
     .no-dead-code,

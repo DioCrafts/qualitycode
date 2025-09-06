@@ -61,6 +61,17 @@ class AnalysisResponseDTO(BaseModel):
     result: Optional[Dict[str, Any]] = None
 
 
+class FileContentResponseDTO(BaseModel):
+    """DTO para respuesta de contenido de archivo."""
+    file_path: str
+    file_name: str
+    line_number: int
+    content: str
+    total_lines: int
+    success: bool
+    error: Optional[str] = None
+
+
 # Servicio simulado
 class AnalysisSimulator:
     """Simulador de análisis de código para desarrollo."""
@@ -361,4 +372,78 @@ async def get_latest_analysis(project_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener último análisis: {str(e)}"
+        )
+
+
+@router.get("/projects/{project_id}/file-content")
+async def get_file_content(
+    project_id: str,
+    file_path: str,
+    line_number: int = 1
+) -> FileContentResponseDTO:
+    """
+    Obtener el contenido de un archivo específico.
+    """
+    try:
+        logger.info(f"Obteniendo contenido del archivo {file_path} para proyecto {project_id}")
+        
+        # Construir la ruta completa del archivo
+        import os
+        full_file_path = os.path.join("/tmp/codeant/projects", project_id, file_path.lstrip('/'))
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(full_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Archivo no encontrado: {file_path}"
+            )
+        
+        # Leer el contenido del archivo
+        with open(full_file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Obtener el nombre del archivo
+        file_name = os.path.basename(full_file_path)
+        
+        # Contar las líneas
+        total_lines = len(content.splitlines())
+        
+        # Verificar que la línea solicitada existe
+        if line_number < 1 or line_number > total_lines:
+            line_number = 1
+        
+        logger.info(f"Archivo leído exitosamente: {file_name} ({total_lines} líneas)")
+        
+        return FileContentResponseDTO(
+            file_path=file_path,
+            file_name=file_name,
+            line_number=line_number,
+            content=content,
+            total_lines=total_lines,
+            success=True
+        )
+        
+    except FileNotFoundError:
+        logger.warning(f"Archivo no encontrado: {file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Archivo no encontrado: {file_path}"
+        )
+    except PermissionError:
+        logger.warning(f"Sin permisos para leer el archivo: {file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Sin permisos para leer el archivo: {file_path}"
+        )
+    except UnicodeDecodeError:
+        logger.warning(f"Error de codificación al leer el archivo: {file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error de codificación al leer el archivo: {file_path}"
+        )
+    except Exception as e:
+        logger.exception(f"Error al leer el archivo {file_path}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al leer el archivo: {str(e)}"
         )

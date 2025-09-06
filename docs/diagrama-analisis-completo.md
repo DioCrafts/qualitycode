@@ -5,63 +5,63 @@ Este diagrama muestra todos los análisis que se ejecutan cuando se pulsa el bot
 ```mermaid
 graph TB
     subgraph "🚀 Análisis al Pulsar 'Analizar Proyecto'"
-        A[Analizar Proyecto] --> B{Análisis en Paralelo<br/>asyncio.gather()}
+        A[Analizar Proyecto] --> B{Análisis en Paralelo asyncio.gather}
         
-        B --> C["🔧 Análisis de Complejidad<br/>(include_complexity)"]
-        B --> D["📊 Métricas de Calidad<br/>(include_metrics)"]
-        B --> E["💀 Código Muerto<br/>(include_dead_code)"]
-        B --> F["🔒 Seguridad<br/>(include_security)"]
-        B --> G["📑 Duplicados<br/>(include_duplicates)"]
-        B --> H["🐛 Bugs Potenciales<br/>(include_bugs)"]
-        B --> I["📦 Dependencias<br/>(include_dependencies)"]
-        B --> J["🧪 Cobertura de Tests<br/>(include_test_coverage)"]
-        B --> K["⚡ Performance<br/>(include_performance)"]
-        B --> L["🏗️ Arquitectura<br/>(include_architecture)"]
-        B --> M["📝 Documentación<br/>(include_documentation)"]
+        B --> C["🔧 Análisis de Complejidad (include_complexity)"]
+        B --> D["📊 Métricas de Calidad (include_metrics)"]
+        B --> E["💀 Código Muerto (include_dead_code)"]
+        B --> F["🔒 Seguridad (include_security)"]
+        B --> G["📑 Duplicados (include_duplicates)"]
+        B --> H["🐛 Bugs Potenciales (include_bugs)"]
+        B --> I["📦 Dependencias (include_dependencies)"]
+        B --> J["🧪 Cobertura de Tests (include_test_coverage)"]
+        B --> K["⚡ Performance (include_performance)"]
+        B --> L["🏗️ Arquitectura (include_architecture)"]
+        B --> M["📝 Documentación (include_documentation)"]
         
         %% Análisis de Complejidad
-        C --> C1["<b>Métricas Calculadas:</b><br/>• Complejidad Ciclomática<br/>• Complejidad Cognitiva<br/>• Número de parámetros<br/>• Profundidad de anidamiento<br/>• Líneas de código por función"]
-        C1 --> C2["<b>Tecnologías:</b><br/>• AST Parser por lenguaje<br/>• Tree-sitter (Python/JS/TS/Rust)<br/>• Cross-language analysis<br/>• Unified AST"]
+        C --> C1["Métricas Calculadas: • Complejidad Ciclomática • Complejidad Cognitiva • Número de parámetros • Profundidad de anidamiento • Líneas de código por función"]
+        C1 --> C2["Tecnologías: • AST Parser por lenguaje • Tree-sitter (Python/JS/TS/Rust) • Cross-language analysis • Unified AST"]
         
         %% Métricas de Calidad
-        D --> D1["<b>Índices Calculados:</b><br/>• Índice de Mantenibilidad<br/>• Deuda Técnica (TODOs/FIXMEs)<br/>• Cobertura de Documentación<br/>• Code Smells detectados<br/>• Ratio comentarios/código"]
-        D1 --> D2["<b>Fórmulas:</b><br/>• MI = 171 - 5.2*ln(V) - 0.23*CC - 16.2*ln(LOC)<br/>• Tech Debt = TODOs * 30min<br/>• Doc Coverage = (documented/total) * 100"]
+        D --> D1["Índices Calculados: • Índice de Mantenibilidad • Deuda Técnica (TODOs/FIXMEs) • Cobertura de Documentación • Code Smells detectados • Ratio comentarios/código"]
+        D1 --> D2["Fórmulas: • MI = 171 - 5.2*ln(V) - 0.23*CC - 16.2*ln(LOC) • Tech Debt = TODOs * 30min • Doc Coverage = (documented/total) * 100"]
         
         %% Código Muerto
-        E --> E1["<b>Detección de:</b><br/>• Variables no usadas<br/>• Funciones no usadas<br/>• Clases no usadas<br/>• Imports no usados<br/>• Código inalcanzable"]
-        E1 --> E2["<b>Análisis AST:</b><br/>• Control Flow Graph<br/>• Scope analysis<br/>• Reference tracking<br/>• Cross-module analysis"]
+        E --> E1["Detección de: • Variables no usadas • Funciones no usadas • Clases no usadas • Imports no usados • Código inalcanzable"]
+        E1 --> E2["Análisis AST: • Control Flow Graph • Scope analysis • Reference tracking • Cross-module analysis"]
         
         %% Seguridad
-        F --> F1["<b>Vulnerabilidades:</b><br/>• Secretos hardcodeados (API keys, passwords)<br/>• Funciones inseguras (eval, exec)<br/>• SQL Injection patterns<br/>• XSS vulnerabilities<br/>• Path traversal"]
-        F1 --> F2["<b>Compliance:</b><br/>• OWASP Top 10<br/>• CWE categorization<br/>• Severity levels (CRITICAL/HIGH/MEDIUM/LOW)<br/>• Security hotspots"]
+        F --> F1["Vulnerabilidades: • Secretos hardcodeados (API keys, passwords) • Funciones inseguras (eval, exec) • SQL Injection patterns • XSS vulnerabilities • Path traversal"]
+        F1 --> F2["Compliance: • OWASP Top 10 • CWE categorization • Severity levels (CRITICAL/HIGH/MEDIUM/LOW) • Security hotspots"]
         
         %% Duplicados
-        G --> G1["<b>Análisis:</b><br/>• Archivos con nombres similares<br/>• Bloques de código duplicados<br/>• Funciones similares<br/>• Porcentaje de duplicación<br/>• Clone detection"]
-        G1 --> G2["<b>Algoritmos:</b><br/>• Levenshtein distance<br/>• Token-based comparison<br/>• AST similarity<br/>• Hash-based detection"]
+        G --> G1["Análisis: • Archivos con nombres similares • Bloques de código duplicados • Funciones similares • Porcentaje de duplicación • Clone detection"]
+        G1 --> G2["Algoritmos: • Levenshtein distance • Token-based comparison • AST similarity • Hash-based detection"]
         
         %% Bugs Potenciales
-        H --> H1["<b>Patrones Detectados:</b><br/>• Null pointer exceptions<br/>• División por cero<br/>• Índices fuera de rango<br/>• Bucles infinitos<br/>• Race conditions"]
-        H1 --> H2["<b>Análisis por Lenguaje:</b><br/>• Python: .get().method, except:<br/>• JS/TS: JSON.parse sin try-catch<br/>• TypeScript: uso de 'any'<br/>• Memory leaks: archivos sin cerrar"]
+        H --> H1["Patrones Detectados: • Null pointer exceptions • División por cero • Índices fuera de rango • Bucles infinitos • Race conditions"]
+        H1 --> H2["Análisis por Lenguaje: • Python: .get().method, except: • JS/TS: JSON.parse sin try-catch • TypeScript: uso de 'any' • Memory leaks: archivos sin cerrar"]
         
         %% Dependencias
-        I --> I1["<b>Información:</b><br/>• Total de dependencias<br/>• Directas vs desarrollo<br/>• Dependencias obsoletas<br/>• Vulnerabilidades conocidas<br/>• Licencias problemáticas"]
-        I1 --> I2["<b>Archivos Analizados:</b><br/>• package.json<br/>• pyproject.toml<br/>• requirements.txt<br/>• Cargo.toml<br/>• go.mod"]
+        I --> I1["Información: • Total de dependencias • Directas vs desarrollo • Dependencias obsoletas • Vulnerabilidades conocidas • Licencias problemáticas"]
+        I1 --> I2["Archivos Analizados: • package.json • pyproject.toml • requirements.txt • Cargo.toml • go.mod"]
         
         %% Cobertura de Tests
-        J --> J1["<b>Métricas:</b><br/>• Archivos con tests<br/>• Funciones de test<br/>• Cobertura estimada %<br/>• Tipos: unit/integration/e2e<br/>• Test quality score"]
-        J1 --> J2["<b>Detección:</b><br/>• test_*.py, *_test.py<br/>• *.test.js, *.spec.ts<br/>• describe(), it(), test()<br/>• pytest, jest, mocha"]
+        J --> J1["Métricas: • Archivos con tests • Funciones de test • Cobertura estimada % • Tipos: unit/integration/e2e • Test quality score"]
+        J1 --> J2["Detección: • test_*.py, *_test.py • *.test.js, *.spec.ts • describe(), it(), test() • pytest, jest, mocha"]
         
         %% Performance
-        K --> K1["<b>Problemas Detectados:</b><br/>• Algoritmos O(n²)<br/>• N+1 queries<br/>• Operaciones bloqueantes<br/>• DOM manipulation ineficiente<br/>• Sync en contexto async"]
-        K1 --> K2["<b>Patrones:</b><br/>• Bucles anidados<br/>• querySelector en loops<br/>• innerHTML +=<br/>• Array.filter().map()<br/>• time.sleep(), requests síncronos"]
+        K --> K1["Problemas Detectados: • Algoritmos O(n²) • N+1 queries • Operaciones bloqueantes • DOM manipulation ineficiente • Sync en contexto async"]
+        K1 --> K2["Patrones: • Bucles anidados • querySelector en loops • innerHTML += • Array.filter().map() • time.sleep(), requests síncronos"]
         
         %% Arquitectura
-        L --> L1["<b>Violaciones:</b><br/>• Violaciones de capas<br/>• God classes (>500 líneas)<br/>• God functions (>50 líneas)<br/>• Alto acoplamiento (>15 imports)<br/>• Dependencias circulares"]
-        L1 --> L2["<b>Análisis Hexagonal:</b><br/>• Domain → Infrastructure ❌<br/>• Application → Domain ✅<br/>• Infrastructure → Application ✅<br/>• Presentation → Application ✅"]
+        L --> L1["Violaciones: • Violaciones de capas • God classes (>500 líneas) • God functions (>50 líneas) • Alto acoplamiento (>15 imports) • Dependencias circulares"]
+        L1 --> L2["Análisis Hexagonal: • Domain → Infrastructure ❌ • Application → Domain ✅ • Infrastructure → Application ✅ • Presentation → Application ✅"]
         
         %% Documentación
-        M --> M1["<b>Cobertura:</b><br/>• Funciones documentadas %<br/>• Clases documentadas %<br/>• README quality score<br/>• Inline comments ratio<br/>• TODOs/FIXMEs obsoletos"]
-        M1 --> M2["<b>Verificación:</b><br/>• Python: docstrings<br/>• JS/TS: JSDoc<br/>• README sections<br/>• API documentation<br/>• Code examples"]
+        M --> M1["Cobertura: • Funciones documentadas % • Clases documentadas % • README quality score • Inline comments ratio • TODOs/FIXMEs obsoletos"]
+        M1 --> M2["Verificación: • Python: docstrings • JS/TS: JSDoc • README sections • API documentation • Code examples"]
         
         %% Resultado Final
         C2 --> R[📊 Resultado Consolidado]
@@ -76,7 +76,7 @@ graph TB
         L2 --> R
         M2 --> R
         
-        R --> R1["<b>AnalysisResults:</b><br/>• Total violations<br/>• Critical/High/Medium/Low<br/>• Quality score (0-100)<br/>• Files analyzed<br/>• Execution time"]
+        R --> R1["AnalysisResults: • Total violations • Critical/High/Medium/Low • Quality score (0-100) • Files analyzed • Execution time"]
     end
     
     %% Estilos
@@ -95,6 +95,7 @@ graph TB
     style M fill:#84cc16,stroke:#65a30d,stroke-width:2px,color:#fff
     style R fill:#0ea5e9,stroke:#0284c7,stroke-width:3px,color:#fff
     style R1 fill:#0f172a,stroke:#020617,stroke-width:2px,color:#fff
+    
 ```
 
 ## 📋 Resumen de Análisis Implementados
