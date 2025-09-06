@@ -389,7 +389,13 @@ async def get_file_content(
         
         # Construir la ruta completa del archivo
         import os
+        
+        # Construir la ruta relativa al proyecto
         full_file_path = os.path.join("/tmp/codeant/projects", project_id, file_path.lstrip('/'))
+        
+        logger.info(f"Ruta del archivo recibida: {file_path}")
+        logger.info(f"Ruta construida: {full_file_path}")
+        logger.info(f"Archivo existe: {os.path.exists(full_file_path)}")
         
         # Verificar que el archivo existe
         if not os.path.exists(full_file_path):

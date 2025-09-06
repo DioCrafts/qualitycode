@@ -1663,7 +1663,10 @@
                                                     title="Ver en contexto"
                                                     on:click={() =>
                                                         viewFile(
-                                                            item.file,
+                                                            item.file.replace(
+                                                                `/tmp/codeant/projects/${projectId}/`,
+                                                                "",
+                                                            ),
                                                             item.line,
                                                         )}
                                                 >
