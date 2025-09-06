@@ -7,18 +7,23 @@
         Building,
         Building2,
         ChartColumn,
+        CheckCircle,
         CheckCircle2,
         Code2,
         Copy,
+        Eye,
+        FileCode,
         FileText,
         Gauge,
         Info,
         Lightbulb,
         Package,
+        Search,
         Shield,
         Skull,
         TestTube,
         TestTube2,
+        Trash2,
         TrendingUp,
         Zap,
     } from "lucide-svelte";
@@ -1273,317 +1278,319 @@
                     {/if}
 
                     <!-- Lista detallada de código muerto -->
-                    <div class="dead-code-lists">
-                        {#if analysis.dead_code_results?.unused_variables?.length}
-                            <div class="dead-code-section">
-                                <h3>
-                                    <span class="section-icon">🔤</span>
-                                    Variables No Usadas ({analysis
-                                        .dead_code_results.unused_variables
-                                        .length})
-                                </h3>
-                                <div class="dead-code-items-detailed">
-                                    {#each analysis.dead_code_results.unused_variables.slice(0, 10) as item, i}
-                                        <div class="dead-code-item-expanded">
-                                            <div class="item-header">
-                                                <div class="item-info">
-                                                    <span class="item-number"
+                    <div class="dead-code-main-list">
+                        {#if analysis.dead_code_results}
+                            {@const allDeadCodeItems = [
+                                ...(
+                                    analysis.dead_code_results
+                                        .unused_variables || []
+                                ).map((item) => ({
+                                    ...item,
+                                    type: "variable",
+                                })),
+                                ...(
+                                    analysis.dead_code_results
+                                        .unused_functions || []
+                                ).map((item) => ({
+                                    ...item,
+                                    type: "function",
+                                })),
+                                ...(
+                                    analysis.dead_code_results.unused_classes ||
+                                    []
+                                ).map((item) => ({ ...item, type: "class" })),
+                                ...(
+                                    analysis.dead_code_results.unused_imports ||
+                                    []
+                                ).map((item) => ({ ...item, type: "import" })),
+                            ].sort(
+                                (a, b) =>
+                                    (b.confidence || 0) - (a.confidence || 0),
+                            )}
+
+                            {#if allDeadCodeItems.length > 0}
+                                <div class="dead-code-items-container">
+                                    {#each allDeadCodeItems as item, i}
+                                        <div
+                                            class="dead-code-item-card {item.confidence >
+                                            95
+                                                ? 'safe-to-delete'
+                                                : 'needs-review'}"
+                                        >
+                                            <!-- Header con tipo y confianza -->
+                                            <div class="dead-item-header">
+                                                <div class="dead-item-info">
+                                                    <span
+                                                        class="dead-item-number"
                                                         >#{i + 1}</span
                                                     >
                                                     <span
-                                                        class="item-name variable"
-                                                        >{item.name}</span
+                                                        class="dead-item-type-icon"
                                                     >
-                                                    <span class="item-type"
-                                                        >Variable</span
+                                                        {#if item.type === "variable"}
+                                                            <span
+                                                                class="type-icon"
+                                                                >🔤</span
+                                                            >
+                                                        {:else if item.type === "function"}
+                                                            <span
+                                                                class="type-icon"
+                                                                >⚡</span
+                                                            >
+                                                        {:else if item.type === "class"}
+                                                            <span
+                                                                class="type-icon"
+                                                                >📦</span
+                                                            >
+                                                        {:else if item.type === "import"}
+                                                            <span
+                                                                class="type-icon"
+                                                                >📥</span
+                                                            >
+                                                        {/if}
+                                                    </span>
+                                                    <div
+                                                        class="dead-item-title"
                                                     >
-                                                </div>
-                                                <span
-                                                    class="confidence-badge high"
-                                                >
-                                                    {item.confidence || 99}%
-                                                    seguro
-                                                </span>
-                                            </div>
-
-                                            <div class="item-location">
-                                                <Code2 size={14} />
-                                                <span class="file-path"
-                                                    >{item.file}</span
-                                                >
-                                                <span class="line-number"
-                                                    >Línea {item.line}</span
-                                                >
-                                            </div>
-
-                                            {#if item.context || item.code_snippet}
-                                                <div class="code-context">
-                                                    <div class="context-header">
                                                         <span
-                                                            >Contexto del código</span
+                                                            class="dead-item-name"
+                                                            >{item.name ||
+                                                                "Sin nombre"}</span
+                                                        >
+                                                        <span
+                                                            class="dead-item-type"
+                                                            >{item.type ===
+                                                            "variable"
+                                                                ? "Variable"
+                                                                : item.type ===
+                                                                    "function"
+                                                                  ? "Función"
+                                                                  : item.type ===
+                                                                      "class"
+                                                                    ? "Clase"
+                                                                    : "Import"}</span
+                                                        >
+                                                    </div>
+                                                </div>
+
+                                                <!-- Etiqueta de confianza -->
+                                                {#if item.confidence > 95}
+                                                    <div
+                                                        class="confidence-label safe"
+                                                    >
+                                                        <CheckCircle
+                                                            size={16}
+                                                        />
+                                                        <span
+                                                            >Seguro eliminar</span
+                                                        >
+                                                        <span
+                                                            class="confidence-percent"
+                                                            >{item.confidence ||
+                                                                99}%</span
+                                                        >
+                                                    </div>
+                                                {:else}
+                                                    <div
+                                                        class="confidence-label review"
+                                                    >
+                                                        <AlertTriangle
+                                                            size={16}
+                                                        />
+                                                        <span
+                                                            >Requiere revisión</span
+                                                        >
+                                                        <span
+                                                            class="confidence-percent"
+                                                            >{item.confidence ||
+                                                                80}%</span
+                                                        >
+                                                    </div>
+                                                {/if}
+                                            </div>
+
+                                            <!-- Ubicación del archivo -->
+                                            <div class="dead-item-location">
+                                                <FileCode size={16} />
+                                                <span class="location-file"
+                                                    >{item.file ||
+                                                        "Archivo desconocido"}</span
+                                                >
+                                                {#if item.line}
+                                                    <span class="location-line">
+                                                        Línea {item.line}{item.end_line
+                                                            ? `-${item.end_line}`
+                                                            : ""}
+                                                    </span>
+                                                {/if}
+                                            </div>
+
+                                            <!-- Razón del código muerto -->
+                                            {#if item.reason}
+                                                <div class="dead-item-reason">
+                                                    <Info size={14} />
+                                                    <span>{item.reason}</span>
+                                                </div>
+                                            {/if}
+
+                                            <!-- Fragmento de código completo -->
+                                            {#if item.code_snippet || item.signature || item.declaration}
+                                                <div class="dead-item-code">
+                                                    <div class="code-header">
+                                                        <Code2 size={16} />
+                                                        <span
+                                                            >Código afectado:</span
                                                         >
                                                     </div>
                                                     <pre
                                                         class="code-block"><code
                                                             >{item.code_snippet ||
-                                                                `${item.line - 1}: ...
-${item.line}: ${item.declaration || `${item.name} = valor`}
-${item.line + 1}: ...`}</code
+                                                                item.signature ||
+                                                                item.declaration ||
+                                                                "// Código no disponible"}</code
                                                         ></pre>
                                                 </div>
                                             {/if}
 
-                                            <div class="removal-impact">
-                                                <h5>Impacto de eliminación:</h5>
-                                                <ul>
-                                                    <li>
-                                                        ✅ Sin referencias
-                                                        encontradas en el código
-                                                    </li>
-                                                    <li>
-                                                        ✅ No afecta la
-                                                        funcionalidad
-                                                    </li>
-                                                    <li>
-                                                        💾 Ahorra {item.memory_saved ||
-                                                            "~4"} bytes
-                                                    </li>
-                                                </ul>
-                                            </div>
-
-                                            <div class="action-buttons">
-                                                <button class="btn-remove">
-                                                    🗑️ Eliminar variable
-                                                </button>
-                                                <button class="btn-review">
-                                                    👁️ Revisar usos
-                                                </button>
-                                            </div>
-                                        </div>
-                                    {/each}
-                                </div>
-                            </div>
-                        {/if}
-
-                        {#if analysis.dead_code_results?.unused_functions?.length}
-                            <div class="dead-code-section">
-                                <h3>
-                                    <span class="section-icon">🔧</span>
-                                    Funciones No Usadas ({analysis
-                                        .dead_code_results.unused_functions
-                                        .length})
-                                </h3>
-                                <div class="dead-code-items-detailed">
-                                    {#each analysis.dead_code_results.unused_functions.slice(0, 10) as item, i}
-                                        <div class="dead-code-item-expanded">
-                                            <div class="item-header">
-                                                <div class="item-info">
-                                                    <span class="item-number"
-                                                        >#{i + 1}</span
-                                                    >
-                                                    <span
-                                                        class="item-name function"
-                                                        >{item.name}()</span
-                                                    >
-                                                    <span class="item-type"
-                                                        >Función</span
-                                                    >
-                                                </div>
-                                                <span
-                                                    class="confidence-badge {item.confidence >
-                                                    90
-                                                        ? 'high'
-                                                        : 'medium'}"
-                                                >
-                                                    {item.confidence || 95}%
-                                                    seguro
-                                                </span>
-                                            </div>
-
-                                            <div class="item-location">
-                                                <Code2 size={14} />
-                                                <span class="file-path"
-                                                    >{item.file}</span
-                                                >
-                                                <span class="line-number"
-                                                    >Líneas {item.line} - {item.end_line ||
-                                                        item.line + 5}</span
-                                                >
-                                            </div>
-
-                                            <div class="function-signature">
-                                                <span class="signature-label"
-                                                    >Firma:</span
-                                                >
-                                                <code
-                                                    >{item.signature ||
-                                                        `def ${item.name}(${item.params || "..."})`}</code
-                                                >
-                                            </div>
-
-                                            {#if item.code_snippet}
-                                                <div class="code-context">
-                                                    <div class="context-header">
-                                                        <span
-                                                            >Implementación</span
+                                            <!-- Información adicional -->
+                                            {#if item.type === "function" && (item.complexity || item.lines_of_code)}
+                                                <div class="dead-item-metrics">
+                                                    {#if item.complexity}
+                                                        <div
+                                                            class="metric-item"
                                                         >
-                                                        <span
-                                                            class="lines-count"
-                                                            >{item.lines_of_code ||
-                                                                "?"} líneas</span
+                                                            <span
+                                                                class="metric-label"
+                                                                >Complejidad:</span
+                                                            >
+                                                            <span
+                                                                class="metric-value"
+                                                                >{item.complexity}</span
+                                                            >
+                                                        </div>
+                                                    {/if}
+                                                    {#if item.lines_of_code}
+                                                        <div
+                                                            class="metric-item"
                                                         >
-                                                    </div>
-                                                    <pre
-                                                        class="code-block"><code
-                                                            >{item.code_snippet ||
-                                                                `def ${item.name}(...):
-    # Función no utilizada
-    # Complejidad: ${item.complexity || "N/A"}
-    pass`}</code
-                                                        ></pre>
+                                                            <span
+                                                                class="metric-label"
+                                                                >Líneas:</span
+                                                            >
+                                                            <span
+                                                                class="metric-value"
+                                                                >{item.lines_of_code}</span
+                                                            >
+                                                        </div>
+                                                    {/if}
+                                                    {#if item.test_coverage !== undefined}
+                                                        <div
+                                                            class="metric-item"
+                                                        >
+                                                            <span
+                                                                class="metric-label"
+                                                                >Tests:</span
+                                                            >
+                                                            <span
+                                                                class="metric-value"
+                                                                >{item.test_coverage
+                                                                    ? "✅"
+                                                                    : "❌"}</span
+                                                            >
+                                                        </div>
+                                                    {/if}
                                                 </div>
                                             {/if}
 
-                                            <div class="function-analysis">
-                                                <h5>Análisis de la función:</h5>
-                                                <div class="analysis-grid">
-                                                    <div class="analysis-item">
-                                                        <span class="label"
-                                                            >Complejidad:</span
+                                            {#if item.type === "class" && (item.method_count || item.parent_class)}
+                                                <div class="dead-item-metrics">
+                                                    {#if item.method_count}
+                                                        <div
+                                                            class="metric-item"
                                                         >
-                                                        <span class="value"
-                                                            >{item.complexity ||
-                                                                "Baja"}</span
+                                                            <span
+                                                                class="metric-label"
+                                                                >Métodos:</span
+                                                            >
+                                                            <span
+                                                                class="metric-value"
+                                                                >{item.method_count}</span
+                                                            >
+                                                        </div>
+                                                    {/if}
+                                                    {#if item.parent_class}
+                                                        <div
+                                                            class="metric-item"
                                                         >
-                                                    </div>
-                                                    <div class="analysis-item">
-                                                        <span class="label"
-                                                            >Última
-                                                            modificación:</span
-                                                        >
-                                                        <span class="value"
-                                                            >{item.last_modified ||
-                                                                "Desconocida"}</span
-                                                        >
-                                                    </div>
-                                                    <div class="analysis-item">
-                                                        <span class="label"
-                                                            >Posibles llamadas:</span
-                                                        >
-                                                        <span class="value"
-                                                            >{item.potential_calls ||
-                                                                0}</span
-                                                        >
-                                                    </div>
-                                                    <div class="analysis-item">
-                                                        <span class="label"
-                                                            >Tests asociados:</span
-                                                        >
-                                                        <span class="value"
-                                                            >{item.test_coverage
-                                                                ? "Sí"
-                                                                : "No"}</span
-                                                        >
-                                                    </div>
+                                                            <span
+                                                                class="metric-label"
+                                                                >Hereda de:</span
+                                                            >
+                                                            <span
+                                                                class="metric-value"
+                                                                >{item.parent_class}</span
+                                                            >
+                                                        </div>
+                                                    {/if}
                                                 </div>
-                                            </div>
+                                            {/if}
 
+                                            <!-- Sugerencia de eliminación -->
                                             {#if item.removal_suggestion}
-                                                <div class="removal-suggestion">
-                                                    <AlertTriangle size={16} />
+                                                <div
+                                                    class="dead-item-suggestion"
+                                                >
+                                                    <Lightbulb size={14} />
                                                     <span
                                                         >{item.removal_suggestion}</span
                                                     >
                                                 </div>
                                             {/if}
 
-                                            <div class="action-buttons">
-                                                <button class="btn-remove">
-                                                    🗑️ Eliminar función
-                                                </button>
-                                                <button class="btn-review">
-                                                    🔍 Buscar referencias
-                                                </button>
-                                                <button class="btn-test">
-                                                    🧪 Ver tests
-                                                </button>
-                                            </div>
-                                        </div>
-                                    {/each}
-                                </div>
-                            </div>
-                        {/if}
-
-                        {#if analysis.dead_code_results?.unused_classes?.length}
-                            <div class="dead-code-section">
-                                <h3>
-                                    <span class="section-icon">📦</span>
-                                    Clases No Usadas ({analysis
-                                        .dead_code_results.unused_classes
-                                        .length})
-                                </h3>
-                                <div class="dead-code-items-detailed">
-                                    {#each analysis.dead_code_results.unused_classes.slice(0, 5) as item, i}
-                                        <div class="dead-code-item-expanded">
-                                            <div class="item-header">
-                                                <div class="item-info">
-                                                    <span class="item-number"
-                                                        >#{i + 1}</span
-                                                    >
-                                                    <span
-                                                        class="item-name class"
-                                                        >{item.name}</span
-                                                    >
-                                                    <span class="item-type"
-                                                        >Clase</span
-                                                    >
-                                                </div>
-                                                <span
-                                                    class="confidence-badge {item.confidence >
-                                                    90
-                                                        ? 'high'
-                                                        : 'medium'}"
+                                            <!-- Acciones -->
+                                            <div class="dead-item-actions">
+                                                <button
+                                                    class="action-btn view"
+                                                    title="Ver en contexto"
                                                 >
-                                                    {item.confidence || 85}%
-                                                    seguro
-                                                </span>
-                                            </div>
-
-                                            <div class="class-info">
-                                                <div class="info-item">
-                                                    <span>Métodos:</span>
-                                                    <strong
-                                                        >{item.method_count ||
-                                                            0}</strong
-                                                    >
-                                                </div>
-                                                <div class="info-item">
-                                                    <span>Líneas:</span>
-                                                    <strong
-                                                        >{item.lines_of_code ||
-                                                            0}</strong
-                                                    >
-                                                </div>
-                                                <div class="info-item">
-                                                    <span>Herencia:</span>
-                                                    <strong
-                                                        >{item.parent_class ||
-                                                            "None"}</strong
-                                                    >
-                                                </div>
-                                            </div>
-
-                                            <div class="action-buttons">
-                                                <button class="btn-remove">
-                                                    🗑️ Eliminar clase
+                                                    <Eye size={18} />
+                                                    <span>Ver archivo</span>
                                                 </button>
-                                                <button class="btn-review">
-                                                    📋 Ver detalles
-                                                </button>
+                                                {#if item.confidence > 95}
+                                                    <button
+                                                        class="action-btn delete"
+                                                        title="Eliminar código"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                        <span>Eliminar</span>
+                                                    </button>
+                                                {:else}
+                                                    <button
+                                                        class="action-btn review"
+                                                        title="Marcar para revisión"
+                                                    >
+                                                        <Search size={18} />
+                                                        <span>Revisar</span>
+                                                    </button>
+                                                {/if}
                                             </div>
                                         </div>
                                     {/each}
                                 </div>
+                            {:else}
+                                <div class="no-dead-code">
+                                    <CheckCircle2 size={64} />
+                                    <h3>¡Excelente!</h3>
+                                    <p>
+                                        No se detectó código muerto en este
+                                        proyecto.
+                                    </p>
+                                </div>
+                            {/if}
+                        {:else}
+                            <div class="no-data">
+                                <AlertCircle size={48} />
+                                <p>No hay datos de código muerto disponibles</p>
                             </div>
                         {/if}
                     </div>
@@ -3034,51 +3041,276 @@ def duplicated_logic():
         font-family: "JetBrains Mono", monospace;
     }
 
-    /* Dead Code Lists */
-    .dead-code-lists {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 2rem;
+    /* Dead Code Main List */
+    .dead-code-main-list {
+        padding: 20px;
     }
 
-    .dead-code-section h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1.1rem;
+    .dead-code-items-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .dead-code-item-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .dead-code-item-card.safe-to-delete {
+        border-color: #10b981;
+    }
+
+    .dead-code-item-card.needs-review {
+        border-color: #f59e0b;
+    }
+
+    .dead-code-item-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .dead-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .dead-item-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .dead-item-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .dead-item-type-icon .type-icon {
+        font-size: 1.5rem;
+    }
+
+    .dead-item-title {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .dead-item-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1e293b;
+        font-family: "JetBrains Mono", monospace;
+    }
+
+    .dead-item-type {
+        font-size: 0.875rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .confidence-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 24px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .confidence-label.safe {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .confidence-label.review {
+        background-color: #fed7aa;
+        color: #92400e;
+    }
+
+    .confidence-percent {
+        font-weight: 700;
+        margin-left: 4px;
+    }
+
+    .dead-item-location {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 12px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .location-file {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.875rem;
+        color: #475569;
+        flex: 1;
+    }
+
+    .location-line {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .dead-item-reason {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 16px;
+        padding: 12px;
+        background-color: #f0f9ff;
+        border-radius: 8px;
+        border: 1px solid #bae6fd;
+        color: #0369a1;
+        font-size: 0.875rem;
+    }
+
+    .dead-item-code {
+        margin-bottom: 16px;
+    }
+
+    .code-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .code-block {
+        background-color: #1e293b;
+        color: #e2e8f0;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+
+    .dead-item-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+        padding: 16px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+    }
+
+    .metric-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .metric-item .metric-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .metric-item .metric-value {
+        font-size: 1.125rem;
+        font-weight: 600;
         color: #1e293b;
     }
 
-    .item-list {
+    .dead-item-suggestion {
         display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 16px;
+        padding: 12px;
+        background-color: #fef3c7;
+        border-radius: 8px;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-size: 0.875rem;
     }
 
-    .dead-code-item {
+    .dead-item-actions {
         display: flex;
-        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        display: flex;
         align-items: center;
-        padding: 0.75rem 1rem;
-        background: #f8fafc;
+        gap: 6px;
+        padding: 8px 16px;
+        border: none;
         border-radius: 6px;
-        border: 1px solid #e2e8f0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
         transition: all 0.2s;
     }
 
-    .dead-code-item:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+    .action-btn.view {
+        background-color: #e0e7ff;
+        color: #3730a3;
     }
 
-    .item-name {
-        font-family: "Consolas", "Monaco", monospace;
-        font-weight: 500;
-        color: #1e293b;
+    .action-btn.view:hover {
+        background-color: #c7d2fe;
     }
 
-    .item-location {
-        font-size: 0.85rem;
+    .action-btn.delete {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .action-btn.delete:hover {
+        background-color: #fecaca;
+    }
+
+    .action-btn.review {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .action-btn.review:hover {
+        background-color: #fde68a;
+    }
+
+    .no-dead-code,
+    .no-data {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+        text-align: center;
         color: #64748b;
-        font-family: "Consolas", "Monaco", monospace;
+    }
+
+    .no-dead-code h3 {
+        margin: 16px 0 8px;
+        font-size: 1.5rem;
+        color: #10b981;
+    }
+
+    .no-data {
+        color: #94a3b8;
     }
 
     /* Vulnerabilities */
