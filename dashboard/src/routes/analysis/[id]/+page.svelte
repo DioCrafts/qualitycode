@@ -1280,29 +1280,75 @@
                     <!-- Lista detallada de código muerto -->
                     <div class="dead-code-main-list">
                         {#if analysis.dead_code_results}
+                            {#if typeof window !== "undefined"}
+                                {console.log(
+                                    "🔍 Debug dead_code_results:",
+                                    analysis.dead_code_results,
+                                )}
+                                {console.log(
+                                    "🔍 Debug advanced_analysis:",
+                                    analysis.dead_code_results
+                                        .advanced_analysis,
+                                )}
+                                {console.log(
+                                    "🔍 Debug dead_code_items:",
+                                    analysis.dead_code_results.advanced_analysis
+                                        ?.dead_code_items,
+                                )}
+                            {/if}
                             {@const allDeadCodeItems = [
                                 ...(
                                     analysis.dead_code_results
                                         .unused_variables || []
-                                ).map((item) => ({
+                                ).map((item: any) => ({
                                     ...item,
                                     type: "variable",
                                 })),
                                 ...(
                                     analysis.dead_code_results
                                         .unused_functions || []
-                                ).map((item) => ({
+                                ).map((item: any) => ({
                                     ...item,
                                     type: "function",
                                 })),
                                 ...(
                                     analysis.dead_code_results.unused_classes ||
                                     []
-                                ).map((item) => ({ ...item, type: "class" })),
+                                ).map((item: any) => ({
+                                    ...item,
+                                    type: "class",
+                                })),
                                 ...(
                                     analysis.dead_code_results.unused_imports ||
                                     []
-                                ).map((item) => ({ ...item, type: "import" })),
+                                ).map((item: any) => ({
+                                    ...item,
+                                    type: "import",
+                                })),
+                                // Agregar items del análisis avanzado
+                                ...(
+                                    analysis.dead_code_results.advanced_analysis
+                                        ?.dead_code_items || []
+                                ).map((item: any) => ({
+                                    name: item.symbol_name || item.name,
+                                    file: item.file_path || item.file,
+                                    line: item.line_number || item.line,
+                                    confidence: (item.confidence || 0) * 100,
+                                    type:
+                                        item.symbol_type ||
+                                        item.type ||
+                                        "unknown",
+                                    reason:
+                                        item.reason ||
+                                        "No se encontraron referencias",
+                                    code_snippet:
+                                        item.code_snippet || item.declaration,
+                                    removal_suggestion:
+                                        item.suggested_action ||
+                                        item.removal_suggestion,
+                                    safe_to_delete:
+                                        item.safe_to_delete || false,
+                                })),
                             ].sort(
                                 (a, b) =>
                                     (b.confidence || 0) - (a.confidence || 0),
@@ -1589,7 +1635,7 @@
                             {/if}
                         {:else}
                             <div class="no-data">
-                                <AlertCircle size={48} />
+                                <AlertTriangle size={48} />
                                 <p>No hay datos de código muerto disponibles</p>
                             </div>
                         {/if}
