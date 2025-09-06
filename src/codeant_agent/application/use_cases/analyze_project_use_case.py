@@ -721,7 +721,8 @@ class AnalyzeProjectUseCase:
                             "safe_to_delete": len(advanced_results.get("safe_to_delete", [])),
                             "requires_review": len(advanced_results.get("requires_review", [])),
                             "confidence_distribution": advanced_results.get("confidence_distribution", {}),
-                            "recommendations": advanced_results.get("recommendations", [])
+                            "recommendations": advanced_results.get("recommendations", []),
+                            "dead_code_items": advanced_results.get("dead_code_items", [])
                         }
                     }
                     
